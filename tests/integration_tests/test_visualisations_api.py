@@ -81,7 +81,8 @@ def test_api_intent_classification(csv_filename):
         skip_save_unprocessed_output=True
     )
     vis_output_pattern_pdf = model.exp_dir_name + '/*.pdf'
-    visualize.learning_curves_api(train_stats, field=None, output_directory=model.exp_dir_name)
+    # visualize.learning_curves_api(train_stats, field=None, output_directory=model.exp_dir_name)
+    visualize.learning_curves([train_stats], field=None, output_directory=model.exp_dir_name)
     figure_cnt = glob.glob(vis_output_pattern_pdf)
     assert 5 == len(figure_cnt)
     model.close()
