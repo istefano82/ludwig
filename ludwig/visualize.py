@@ -83,20 +83,34 @@ def learning_curves_api(
                     filename=filename
                 )
 
+def load_data_for_viz(*args, **kwargs):
+    training_statistics = kwargs['training_statistics']
+    if len(training_statistics) < 1:
+        logging.error('No training_statistics provided')
+        return
+    training_statistics_per_model_name = [load_json(learning_stats_f)
+                                          for learning_stats_f in
+                                          training_statistics]
+    return training_statistics_per_model_name
+
+
+def manipulate_data(field, training_statistics_per_model_name):
+    fields_set = set()
+    for ls in training_statistics_per_model_name:
+        for _, values in ls.items():
+            for key in values:
+                fields_set.add(key)
+    fields = [field] if field is not None and len(field) > 0 else fields_set
+    return fields
 
 def learning_curves(
-        training_statistics,
+        training_statistics_per_model_name,
         field,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    print("Training statistics are {} field is {}".format(training_statistics, field))
-    if len(training_statistics) < 1:
-        logging.error('No training_statistics provided')
-        return
-
     filename_template = None
     if output_directory:
         filename_template = os.path.join(
@@ -104,16 +118,7 @@ def learning_curves(
             'learning_curves_{}_{}.' + file_format
         )
 
-    training_statistics_per_model_name = [load_json(learning_stats_f)
-                                          for learning_stats_f in
-                                          training_statistics]
-    print("training_statistics_per_model_name", training_statistics_per_model_name)
-    fields_set = set()
-    for ls in training_statistics_per_model_name:
-        for _, values in ls.items():
-            for key in values:
-                fields_set.add(key)
-    fields = [field] if field is not None and len(field) > 0 else fields_set
+    fields = manipulate_data(field, training_statistics_per_model_name)
 
     metrics = [LOSS, ACCURACY, HITS_AT_K, EDIT_DISTANCE]
     for field in fields:
@@ -2283,6 +2288,8 @@ def cli(sys_argv):
     elif args.visualization == 'frequency_vs_f1':
         frequency_vs_f1(**vars(args))
     elif args.visualization == 'learning_curves':
+        training_statistics_per_model_name = load_data_for_viz(**vars(args))
+        setattr(args, 'training_statistics_per_model_name', training_statistics_per_model_name)
         learning_curves(**vars(args))
     else:
         logging.info('Visualization argument not recognized')
