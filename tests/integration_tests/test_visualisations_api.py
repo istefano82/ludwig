@@ -46,24 +46,14 @@ def run_api_experiment(input_features, output_features):
     }
 
     model = LudwigModel(model_definition)
-
-    # # Training with csv
-    # model.train(
-    #     data_csv=data_csv,
-    #     skip_save_processed_input=False,
-    #     skip_save_progress=False,
-    #     skip_save_unprocessed_output=False
-    # )
-    #
-    # model.predict(data_csv=data_csv)
-    #
-    # # Remove results/intermediate data saved to disk
-    # shutil.rmtree(model.exp_dir_name, ignore_errors=True)
-
-    # Training with dataframe
     return model
 
-def test_api_intent_classification(csv_filename):
+def test_learning_curves_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
     # Single sequence input, single category output
     input_features = [sequence_feature(reduce_output='sum')]
     output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
@@ -80,11 +70,17 @@ def test_api_intent_classification(csv_filename):
         skip_save_progress=True,
         skip_save_unprocessed_output=True
     )
-    vis_output_pattern_pdf = model.exp_dir_name + '/*.pdf'
-    # visualize.learning_curves_api(train_stats, field=None, output_directory=model.exp_dir_name)
-    visualize.learning_curves([train_stats], field=None, output_directory=model.exp_dir_name)
-    figure_cnt = glob.glob(vis_output_pattern_pdf)
-    assert 5 == len(figure_cnt)
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        visualize.learning_curves(
+            [train_stats],
+            field=None,
+            output_directory=model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 5 == len(figure_cnt)
     model.close()
     shutil.rmtree(model.exp_dir_name, ignore_errors=True)
 
