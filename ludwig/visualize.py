@@ -36,71 +36,40 @@ from ludwig.utils.data_utils import load_json, load_from_file
 from ludwig.utils.print_utils import logging_level_registry
 
 
+def load_data_for_viz(training_statistics,**kwargs):
+    """Load model training data in to json objects.
 
-def learning_curves_api(
-        training_statistics,
-        field,
-        model_names=None,
-        output_directory=None,
-        file_format='pdf',
-        **kwargs
-):
-
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'learning_curves_{}_{}.' + file_format
+    :param training_statistics: JSON file or list of json files containing the model training stats.
+    :param kwargs: other arguments passed from the argparser.
+    :return training_statistics_per_model_name: List of training statistics loaded as json objects.
+    """
+    try:
+        training_statistics_per_model_name = [load_json(learning_stats_f)
+                                              for learning_stats_f in
+                                              training_statistics]
+    except (TypeError, AttributeError) as err:
+        logging.exception(
+            'Unable to open training statistics file {}!'.format(
+                training_statistics
+            )
         )
-
-    training_statistics_per_model_name = [training_statistics]
-
-    fields_set = set()
-    for ls in training_statistics_per_model_name:
-        for _, values in ls.items():
-            for key in values:
-                fields_set.add(key)
-    fields = [field] if field is not None and len(field) > 0 else fields_set
-
-    metrics = [LOSS, ACCURACY, HITS_AT_K, EDIT_DISTANCE]
-    for field in fields:
-        for metric in metrics:
-            if metric in training_statistics_per_model_name[0]['train'][field]:
-
-                filename = None
-                if filename_template:
-                    filename = filename_template.format(field, metric)
-                    os.makedirs(output_directory, exist_ok=True)
-
-                visualization_utils.learning_curves_plot(
-                    [learning_stats['train'][field][metric]
-                     for learning_stats in training_statistics_per_model_name],
-                    [learning_stats['validation'][field][metric]
-                     for learning_stats in training_statistics_per_model_name],
-                    metric,
-                    model_names,
-                    title='Learning Curves {}'.format(field),
-                    filename=filename
-                )
-
-def load_data_for_viz(*args, **kwargs):
-    training_statistics = kwargs['training_statistics']
-    if len(training_statistics) < 1:
-        logging.error('No training_statistics provided')
         return
-    training_statistics_per_model_name = [load_json(learning_stats_f)
-                                          for learning_stats_f in
-                                          training_statistics]
     return training_statistics_per_model_name
 
 
-def manipulate_data(field, training_statistics_per_model_name):
+def validate_visualisation_prediction_field(field, training_statistics_per_model_name):
+    """Validate prediction field and return it as iterable.
+
+    :param field: field containing ground truth
+    :param training_statistics_per_model_name: list of per model train stats
+    :return fields: list of fields containing ground truth
+    """
     fields_set = set()
     for ls in training_statistics_per_model_name:
         for _, values in ls.items():
             for key in values:
                 fields_set.add(key)
-    fields = [field] if field is not None and len(field) > 0 else fields_set
+    fields = [field] if field in fields_set else fields_set
     return fields
 
 def learning_curves(
@@ -118,7 +87,7 @@ def learning_curves(
             'learning_curves_{}_{}.' + file_format
         )
 
-    fields = manipulate_data(field, training_statistics_per_model_name)
+    fields = validate_visualisation_prediction_field(field, training_statistics_per_model_name)
 
     metrics = [LOSS, ACCURACY, HITS_AT_K, EDIT_DISTANCE]
     for field in fields:
@@ -140,7 +109,6 @@ def learning_curves(
                     title='Learning Curves {}'.format(field),
                     filename=filename
                 )
-
 
 def compare_performance(
         test_statistics,
@@ -2126,7 +2094,7 @@ def cli(sys_argv):
     parser.add_argument(
         '-f',
         '--field',
-        default=[],
+        default=None,
         help='field containing ground truth'
     )
     parser.add_argument(
