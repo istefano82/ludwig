@@ -39,9 +39,11 @@ from ludwig.utils.print_utils import logging_level_registry
 def load_data_for_viz(training_statistics,**kwargs):
     """Load model training data in to json objects.
 
-    :param training_statistics: JSON file or list of json files containing the model training stats.
+    :param training_statistics: JSON file or list of json files containing the
+        model training stats.
     :param kwargs: other arguments passed from the argparser.
-    :return training_statistics_per_model_name: List of training statistics loaded as json objects.
+    :return training_statistics_per_model_name: List of training statistics l
+            oaded as json objects.
     """
     try:
         training_statistics_per_model_name = [load_json(learning_stats_f)
@@ -57,7 +59,10 @@ def load_data_for_viz(training_statistics,**kwargs):
     return training_statistics_per_model_name
 
 
-def validate_visualisation_prediction_field(field, training_statistics_per_model_name):
+def validate_visualisation_prediction_field(
+        field,
+        training_statistics_per_model_name
+):
     """Validate prediction field and return it as iterable.
 
     :param field: field containing ground truth
@@ -72,6 +77,21 @@ def validate_visualisation_prediction_field(field, training_statistics_per_model
     fields = [field] if field in fields_set else fields_set
     return fields
 
+def generate_filename_template_path(output_dir, filename_template):
+    """Ensure path to template file can be constructed given an output dir.
+
+    Create output directory if yet does exist.
+    :param output_dir: Directory that will contain the filename_template file
+    :param filename_template: name of the file template to be appended to the
+            filename template path
+    :return: path to filename template inside the output dir or None if the
+             output dir is None
+    """
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        return os.path.join(output_dir, filename_template)
+    return None
+
 def learning_curves(
         training_statistics_per_model_name,
         field,
@@ -80,24 +100,24 @@ def learning_curves(
         file_format='pdf',
         **kwargs
 ):
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'learning_curves_{}_{}.' + file_format
-        )
+    filename_template = 'learning_curves_{}_{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
 
-    fields = validate_visualisation_prediction_field(field, training_statistics_per_model_name)
+    fields = validate_visualisation_prediction_field(
+        field,
+        training_statistics_per_model_name
+    )
 
     metrics = [LOSS, ACCURACY, HITS_AT_K, EDIT_DISTANCE]
     for field in fields:
         for metric in metrics:
             if metric in training_statistics_per_model_name[0]['train'][field]:
-
                 filename = None
-                if filename_template:
-                    filename = filename_template.format(field, metric)
-                    os.makedirs(output_directory, exist_ok=True)
+                if filename_template_path:
+                    filename = filename_template_path.format(field, metric)
 
                 visualization_utils.learning_curves_plot(
                     [learning_stats['train'][field][metric]
