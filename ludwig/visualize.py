@@ -36,11 +36,11 @@ from ludwig.utils.data_utils import load_json, load_from_file
 from ludwig.utils.print_utils import logging_level_registry
 
 
-def load_data_for_viz(training_statistics,**kwargs):
+def load_data_for_viz(training_statistics, **kwargs):
     """Load model training data in to json objects.
 
     :param training_statistics: JSON file or list of json files containing the
-        model training stats.
+           model training stats.
     :param kwargs: other arguments passed from the argparser.
     :return training_statistics_per_model_name: List of training statistics l
             oaded as json objects.
@@ -58,24 +58,34 @@ def load_data_for_viz(training_statistics,**kwargs):
         return
     return training_statistics_per_model_name
 
+def convert_to_list(item):
+    """If item is not list class instance or None put inside a list.
+
+    :param item: object to be checked and converted
+    :return: original item if it is a list instance or list containing the item.
+    """
+    return item if item is None or isinstance(item, list) else [item]
 
 def validate_visualisation_prediction_field(
         field,
-        training_statistics_per_model_name
+        train_stats_per_model
 ):
     """Validate prediction field and return it as iterable.
 
     :param field: field containing ground truth
-    :param training_statistics_per_model_name: list of per model train stats
+    :param train_stats_per_model: list of per model train stats
     :return fields: list of fields containing ground truth
     """
     fields_set = set()
-    for ls in training_statistics_per_model_name:
+    for ls in train_stats_per_model:
         for _, values in ls.items():
             for key in values:
                 fields_set.add(key)
-    fields = [field] if field in fields_set else fields_set
-    return fields
+    try:
+        return [field] if field in fields_set else fields_set
+    except TypeError:
+        return fields_set
+
 
 def generate_filename_template_path(output_dir, filename_template):
     """Ensure path to template file can be constructed given an output dir.
@@ -93,7 +103,7 @@ def generate_filename_template_path(output_dir, filename_template):
     return None
 
 def learning_curves(
-        training_statistics_per_model_name,
+        train_stats_per_model,
         field,
         model_names=None,
         output_directory=None,
@@ -105,27 +115,28 @@ def learning_curves(
         output_directory,
         filename_template
     )
-
+    train_stats_per_model_list = convert_to_list(train_stats_per_model)
+    model_names_list = convert_to_list(model_names)
     fields = validate_visualisation_prediction_field(
         field,
-        training_statistics_per_model_name
+        train_stats_per_model_list
     )
 
     metrics = [LOSS, ACCURACY, HITS_AT_K, EDIT_DISTANCE]
     for field in fields:
         for metric in metrics:
-            if metric in training_statistics_per_model_name[0]['train'][field]:
+            if metric in train_stats_per_model_list[0]['train'][field]:
                 filename = None
                 if filename_template_path:
                     filename = filename_template_path.format(field, metric)
 
                 visualization_utils.learning_curves_plot(
                     [learning_stats['train'][field][metric]
-                     for learning_stats in training_statistics_per_model_name],
+                     for learning_stats in train_stats_per_model_list],
                     [learning_stats['validation'][field][metric]
-                     for learning_stats in training_statistics_per_model_name],
+                     for learning_stats in train_stats_per_model_list],
                     metric,
-                    model_names,
+                    model_names_list,
                     title='Learning Curves {}'.format(field),
                     filename=filename
                 )
@@ -2114,7 +2125,7 @@ def cli(sys_argv):
     parser.add_argument(
         '-f',
         '--field',
-        default=None,
+        default=[],
         help='field containing ground truth'
     )
     parser.add_argument(
@@ -2276,9 +2287,11 @@ def cli(sys_argv):
     elif args.visualization == 'frequency_vs_f1':
         frequency_vs_f1(**vars(args))
     elif args.visualization == 'learning_curves':
-        training_statistics_per_model_name = load_data_for_viz(**vars(args))
-        setattr(args, 'training_statistics_per_model_name', training_statistics_per_model_name)
-        learning_curves(**vars(args))
+        train_stats_per_model = load_data_for_viz(**vars(args))
+        learning_curves(
+            train_stats_per_model=train_stats_per_model,
+            **vars(args)
+        )
     else:
         logging.info('Visualization argument not recognized')
 
