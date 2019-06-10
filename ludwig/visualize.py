@@ -36,27 +36,27 @@ from ludwig.utils.data_utils import load_json, load_from_file
 from ludwig.utils.print_utils import logging_level_registry
 
 
-def load_data_for_viz(training_statistics, **kwargs):
+def load_data_for_viz(experiment_statistics, **kwargs):
     """Load model training data in to json objects.
 
-    :param training_statistics: JSON file or list of json files containing the
-           model training stats.
+    :param experiment_statistics: JSON file or list of json files containing the
+           model experiment stats.
     :param kwargs: other arguments passed from the argparser.
     :return training_statistics_per_model_name: List of training statistics l
             oaded as json objects.
     """
     try:
-        training_statistics_per_model_name = [load_json(learning_stats_f)
+        stats_per_model_name = [load_json(learning_stats_f)
                                               for learning_stats_f in
-                                              training_statistics]
-    except (TypeError, AttributeError) as err:
+                                              experiment_statistics]
+    except (TypeError, AttributeError):
         logging.exception(
             'Unable to open training statistics file {}!'.format(
-                training_statistics
+                experiment_statistics
             )
         )
         return
-    return training_statistics_per_model_name
+    return stats_per_model_name
 
 def convert_to_list(item):
     """If item is not list class instance or None put inside a list.
