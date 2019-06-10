@@ -36,12 +36,11 @@ from ludwig.utils.data_utils import load_json, load_from_file
 from ludwig.utils.print_utils import logging_level_registry
 
 
-def load_data_for_viz(experiment_statistics, **kwargs):
-    """Load model training data in to json objects.
+def load_data_for_viz(experiment_statistics):
+    """Load model experiment data in to json objects.
 
     :param experiment_statistics: JSON file or list of json files containing the
            model experiment stats.
-    :param kwargs: other arguments passed from the argparser.
     :return training_statistics_per_model_name: List of training statistics l
             oaded as json objects.
     """
@@ -2287,7 +2286,9 @@ def cli(sys_argv):
     elif args.visualization == 'frequency_vs_f1':
         frequency_vs_f1(**vars(args))
     elif args.visualization == 'learning_curves':
-        train_stats_per_model = load_data_for_viz(**vars(args))
+        train_stats_per_model = load_data_for_viz(
+            vars(args)['training_statistics']
+        )
         learning_curves(
             train_stats_per_model=train_stats_per_model,
             **vars(args)
