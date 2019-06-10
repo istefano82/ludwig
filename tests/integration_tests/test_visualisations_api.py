@@ -74,7 +74,7 @@ def test_learning_curves_vis_api(csv_filename):
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
         visualize.learning_curves(
-            [train_stats],
+            train_stats,
             field=None,
             output_directory=model.exp_dir_name,
             file_format=viz_output
