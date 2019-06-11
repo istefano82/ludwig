@@ -65,15 +65,15 @@ def convert_to_list(item):
     """
     return item if item is None or isinstance(item, list) else [item]
 
-def validate_visualisation_prediction_field(
+def validate_visualisation_prediction_field_from_train_stats(
         field,
         train_stats_per_model
 ):
-    """Validate prediction field and return it as iterable.
+    """Validate prediction field from model train stats and return it as list.
 
     :param field: field containing ground truth
     :param train_stats_per_model: list of per model train stats
-    :return fields: list of fields containing ground truth
+    :return fields: list of field(s) containing ground truth
     """
     fields_set = set()
     for ls in train_stats_per_model:
@@ -85,6 +85,24 @@ def validate_visualisation_prediction_field(
     except TypeError:
         return fields_set
 
+def validate_visualisation_prediction_field_from_test_stats(
+        field,
+        test_stats_per_model
+):
+    """Validate prediction field from model test stats and return it as list.
+
+    :param field: field containing ground truth
+    :param test_stats_per_model: list of per model test stats
+    :return fields: list of field(s) containing ground truth
+    """
+    fields_set = set()
+    for ls in test_stats_per_model:
+        for key in ls:
+            fields_set.add(key)
+    try:
+        return [field] if field in fields_set else fields_set
+    except TypeError:
+        return fields_set
 
 def generate_filename_template_path(output_dir, filename_template):
     """Ensure path to template file can be constructed given an output dir.
@@ -116,7 +134,7 @@ def learning_curves(
     )
     train_stats_per_model_list = convert_to_list(train_stats_per_model)
     model_names_list = convert_to_list(model_names)
-    fields = validate_visualisation_prediction_field(
+    fields = validate_visualisation_prediction_field_from_train_stats(
         field,
         train_stats_per_model_list
     )
@@ -141,46 +159,38 @@ def learning_curves(
                 )
 
 def compare_performance(
-        test_statistics,
+        test_stats_per_model,
         field, model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(test_statistics) < 1:
-        logging.error('No test_statistics provided')
-        return
+    filename_template = 'compare_performance_{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
 
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'compare_performance_{}.' + file_format
-        )
-
-    test_statistics_per_model_name = [load_json(prediction_statistics_f)
-                                      for prediction_statistics_f in
-                                      test_statistics]
-
-    fields_set = set()
-    for ls in test_statistics_per_model_name:
-        for key in ls:
-            fields_set.add(key)
-    fields = [field] if field is not None and len(field) > 0 else fields_set
+    test_stats_per_model_list = convert_to_list(test_stats_per_model)
+    model_names_list = convert_to_list(model_names)
+    fields = validate_visualisation_prediction_field_from_test_stats(
+        field,
+        test_stats_per_model_list
+    )
 
     for field in fields:
         accuracies = []
         hits_at_ks = []
         edit_distances = []
 
-        for test_statistics in test_statistics_per_model_name:
-            if ACCURACY in test_statistics[field]:
-                accuracies.append(test_statistics[field][ACCURACY])
-            if HITS_AT_K in test_statistics[field]:
-                hits_at_ks.append(test_statistics[field][HITS_AT_K])
-            if EDIT_DISTANCE in test_statistics[field]:
+        for test_stats_per_model in test_stats_per_model_list:
+            if ACCURACY in test_stats_per_model[field]:
+                accuracies.append(test_stats_per_model[field][ACCURACY])
+            if HITS_AT_K in test_stats_per_model[field]:
+                hits_at_ks.append(test_stats_per_model[field][HITS_AT_K])
+            if EDIT_DISTANCE in test_stats_per_model[field]:
                 edit_distances.append(
-                    test_statistics[field][EDIT_DISTANCE])
+                    test_stats_per_model[field][EDIT_DISTANCE])
 
         measures = []
         measures_names = []
@@ -195,14 +205,14 @@ def compare_performance(
             measures_names.append(EDIT_DISTANCE)
 
         filename = None
-        if filename_template:
-            filename = filename_template.format(field)
+        if filename_template_path:
+            filename = filename_template_path.format(field)
             os.makedirs(output_directory, exist_ok=True)
 
         visualization_utils.compare_classifiers_plot(
             measures,
             measures_names,
-            model_names,
+            model_names_list,
             title='Performance comparison on {}'.format(field),
             filename=filename
         )
@@ -2243,7 +2253,13 @@ def cli(sys_argv):
     )
 
     if args.visualization == 'compare_performance':
-        compare_performance(**vars(args))
+        test_stats_per_model = load_data_for_viz(
+            vars(args)['test_statistics']
+        )
+        compare_performance(
+            test_stats_per_model=test_stats_per_model,
+            **vars(args)
+        )
     elif args.visualization == 'compare_classifiers_performance_from_prob':
         compare_classifiers_performance_from_prob(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_from_pred':
