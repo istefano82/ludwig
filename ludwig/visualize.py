@@ -229,19 +229,20 @@ def compare_classifiers_performance_from_prob(
         file_format='pdf',
         **kwargs
 ):
+
     if len(probabilities) < 1:
         logging.error('No probabilities provided')
         return
 
     k = top_n_classes[0]
 
-    gt = load_from_file(ground_truth, field)
+    # gt = load_from_file(ground_truth, field)
+    gt = ground_truth
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
-
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
-
+    # probs = [load_from_file(probs_fn, dtype=float)
+    #          for probs_fn in probabilities]
+    probs = probabilities
     accuracies = []
     hits_at_ks = []
     mrrs = []
