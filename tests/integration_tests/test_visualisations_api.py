@@ -205,17 +205,16 @@ def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
     data_df = read_csv(data_csv)
     model.train(
         data_df=data_df,
-        skip_save_processed_input=True,
-        skip_save_progress=True,
-        skip_save_unprocessed_output=True
+        skip_save_processed_input=False,
+        skip_save_progress=False,
+        skip_save_unprocessed_output=False
     )
     test_stats = model.test(
         data_df=data_df
     )
     # predictions need  to be list of lists containing each row data from the
     # prediction column
-    import pdb; pdb.set_trace()
-    prediction = test_stats[0].iloc[:, 0]
+    prediction = test_stats[0].iloc[:, 0].tolist()
     viz_outputs = ('pdf', 'png')
     field = output_features[0]['name']
     ground_truth = data_df[output_features[0]['name']]
@@ -235,4 +234,4 @@ def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 1 == len(figure_cnt)
     model.close()
-    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+    # shutil.rmtree(model.exp_dir_name, ignore_errors=True)

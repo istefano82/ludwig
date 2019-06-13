@@ -287,9 +287,9 @@ def compare_classifiers_performance_from_prob(
 
 
 def compare_classifiers_performance_from_pred(
-        predictions,
-        ground_truth,
-        ground_truth_metadata,
+        preds_per_model,
+        gt,
+        metadata,
         field,
         labels_limit,
         model_names=None,
@@ -297,23 +297,16 @@ def compare_classifiers_performance_from_pred(
         file_format='pdf',
         **kwargs
 ):
-    if len(predictions) < 1:
-        logging.error('No predictions provided')
-        return
 
-    metadata = load_json(ground_truth_metadata)
-
-    gt = load_from_file(ground_truth, field)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
 
-    preds = [load_from_file(preds_fn, dtype=str) for preds_fn in predictions]
+    preds = preds_per_model
 
     mapped_preds = []
     for pred in preds:
         mapped_preds.append([metadata[field]['str2idx'][val] for val in pred])
     preds = mapped_preds
-
     accuracies = []
     precisions = []
     recalls = []
@@ -2267,7 +2260,14 @@ def cli(sys_argv):
             probabilities_per_model, gt, **vars(args)
         )
     elif args.visualization == 'compare_classifiers_performance_from_pred':
-        compare_classifiers_performance_from_pred(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        metadata = load_json(vars(args)['ground_truth_metadata'])
+        preds_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['predictions'], dtype=str
+        )
+        compare_classifiers_performance_from_pred(
+            preds_per_model, gt, metadata, **vars(args)
+        )
     elif args.visualization == 'compare_classifiers_performance_subset':
         compare_classifiers_performance_subset(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_changing_k':
