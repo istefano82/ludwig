@@ -180,3 +180,59 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
         assert 1 == len(figure_cnt)
     model.close()
     shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+
+def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    # Single sequence input, single category output
+    input_features = [
+        text_feature(vocab_size=10, min_len=1, representation='sparse'),
+        categorical_feature(
+            vocab_size=10,
+            loss='sampled_softmax_cross_entropy'
+        )
+    ]
+    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
+    encoder = 'cnnrnn'
+
+    # Generate test data
+    data_csv = generate_data(input_features, output_features, csv_filename)
+    input_features[0]['encoder'] = encoder
+    model = run_api_experiment(input_features, output_features)
+    data_df = read_csv(data_csv)
+    model.train(
+        data_df=data_df,
+        skip_save_processed_input=True,
+        skip_save_progress=True,
+        skip_save_unprocessed_output=True
+    )
+    test_stats = model.test(
+        data_df=data_df
+    )
+    # predictions need  to be list of lists containing each row data from the
+    # prediction column
+    import pdb; pdb.set_trace()
+    prediction = test_stats[0].iloc[:, 0]
+    viz_outputs = ('pdf', 'png')
+    field = output_features[0]['name']
+    ground_truth = data_df[output_features[0]['name']]
+    ground_truth_metadata = model.train_set_metadata
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        visualize.compare_classifiers_performance_from_pred(
+            [prediction, prediction],
+            ground_truth,
+            ground_truth_metadata,
+            field,
+            labels_limit=0,
+            model_name = ['Model1', 'Model2'],
+            output_directory=model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 1 == len(figure_cnt)
+    model.close()
+    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
