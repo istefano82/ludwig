@@ -42,8 +42,7 @@ def load_data_for_viz(load_type, model_file_statistics, *args, **kwargs):
     :param load_type: type of the data loader to be used.
     :param model_file_statistics: JSON file or list of json files containing any
            model experiment stats.
-    :return List of training statistics l
-            oaded as json objects.
+    :return List of training statistics loaded as json objects.
     """
     SUPPORTED_LOAD_TYPES = {
         'load_json': load_json,
