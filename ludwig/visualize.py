@@ -22,7 +22,7 @@ import argparse
 import logging
 import os
 import sys
-import json
+from functools import partial
 import numpy as np
 import sklearn
 from scipy.stats import entropy
@@ -36,26 +36,32 @@ from ludwig.utils.data_utils import load_json, load_from_file
 from ludwig.utils.print_utils import logging_level_registry
 
 
-def load_data_for_viz(experiment_statistics):
-    """Load model experiment data in to json objects.
+def load_data_for_viz(load_type, model_file_statistics, *args, **kwargs):
+    """Load model file data in to list of .
 
-    :param experiment_statistics: JSON file or list of json files containing the
+    :param load_type: type of the data loader to be used.
+    :param model_file_statistics: JSON file or list of json files containing any
            model experiment stats.
-    :return training_statistics_per_model_name: List of training statistics l
+    :return List of training statistics l
             oaded as json objects.
     """
+    SUPPORTED_LOAD_TYPES = {
+        'load_json': load_json,
+        'load_from_file': partial(load_from_file, dtype=kwargs['dtype'])
+    }
+    loader = SUPPORTED_LOAD_TYPES[load_type]
     try:
-        stats_per_model_name = [load_json(learning_stats_f)
-                                              for learning_stats_f in
-                                              experiment_statistics]
+        stats_per_model = [loader(stats_f)
+                                for stats_f in
+                                model_file_statistics]
     except (TypeError, AttributeError):
         logging.exception(
-            'Unable to open training statistics file {}!'.format(
-                experiment_statistics
+            'Unable to open model statistics file {}!'.format(
+                model_file_statistics
             )
         )
         return
-    return stats_per_model_name
+    return stats_per_model
 
 def convert_to_list(item):
     """If item is not list class instance or None put inside a list.
@@ -219,8 +225,8 @@ def compare_performance(
 
 
 def compare_classifiers_performance_from_prob(
-        probabilities,
-        ground_truth,
+        probs_per_model,
+        gt,
         field,
         top_n_classes,
         labels_limit,
@@ -230,19 +236,12 @@ def compare_classifiers_performance_from_prob(
         **kwargs
 ):
 
-    if len(probabilities) < 1:
-        logging.error('No probabilities provided')
-        return
-
     k = top_n_classes[0]
 
-    # gt = load_from_file(ground_truth, field)
-    gt = ground_truth
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
-    # probs = [load_from_file(probs_fn, dtype=float)
-    #          for probs_fn in probabilities]
-    probs = probabilities
+
+    probs = probs_per_model
     accuracies = []
     hits_at_ks = []
     mrrs = []
@@ -2255,14 +2254,20 @@ def cli(sys_argv):
 
     if args.visualization == 'compare_performance':
         test_stats_per_model = load_data_for_viz(
-            vars(args)['test_statistics']
+            'load_json', vars(args)['test_statistics']
         )
         compare_performance(
             test_stats_per_model=test_stats_per_model,
             **vars(args)
         )
     elif args.visualization == 'compare_classifiers_performance_from_prob':
-        compare_classifiers_performance_from_prob(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        compare_classifiers_performance_from_prob(
+            probabilities_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'compare_classifiers_performance_from_pred':
         compare_classifiers_performance_from_pred(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_subset':
@@ -2304,7 +2309,7 @@ def cli(sys_argv):
         frequency_vs_f1(**vars(args))
     elif args.visualization == 'learning_curves':
         train_stats_per_model = load_data_for_viz(
-            vars(args)['training_statistics']
+            'load_json', vars(args)['training_statistics']
         )
         learning_curves(
             train_stats_per_model=train_stats_per_model,
