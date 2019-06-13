@@ -227,7 +227,6 @@ def compare_performance(
 def compare_classifiers_performance_from_prob(
         probs_per_model,
         gt,
-        field,
         top_n_classes,
         labels_limit,
         model_names=None,
