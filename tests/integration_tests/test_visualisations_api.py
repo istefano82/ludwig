@@ -159,7 +159,8 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
     test_stats = model.test(
         data_df=data_df
     )
-    # probabilities need  to be list of lists containing each row data from the probability columns
+    # probabilities need  to be list of lists containing each row data from the
+    # probability columns
     probability = test_stats[0].iloc[:, 2:].values
     viz_outputs = ('pdf', 'png')
     field = output_features[0]['name']
@@ -169,7 +170,6 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
         visualize.compare_classifiers_performance_from_prob(
             [probability, probability],
             ground_truth,
-            field=field,
             top_n_classes=[0],
             labels_limit=0,
             model_name = ['Model1', 'Model2'],
