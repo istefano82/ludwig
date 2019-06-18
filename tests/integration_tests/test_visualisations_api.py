@@ -165,7 +165,6 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
     output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
     encoder = 'cnnrnn'
     data_csv = generate_data(input_features, output_features, csv_filename)
-
     input_features[0]['encoder'] = encoder
     model = run_api_experiment(input_features, output_features)
 
@@ -182,13 +181,14 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
     # probabilities need to be list of lists containing each row data from the
     # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
     probability = test_stats[0].iloc[:, 2:].values
-    target_predictions = test_df[field]
-    viz_outputs = ('pdf', 'png')
+
     ground_truth_metadata = model.train_set_metadata
+    target_predictions = test_df[field]
     ground_truth = [
         ground_truth_metadata[field]['str2idx'][test_row]
         for test_row in target_predictions
     ]
+    viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
         visualize.compare_classifiers_performance_from_prob(
@@ -226,23 +226,26 @@ def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
     data_csv = generate_data(input_features, output_features, csv_filename)
     input_features[0]['encoder'] = encoder
     model = run_api_experiment(input_features, output_features)
-    data_df = read_csv(data_csv)
+
+    test_df, train_df, val_df = obtain_df_splits(data_csv)
     model.train(
-        data_df=data_df,
-        skip_save_processed_input=False,
-        skip_save_progress=False,
-        skip_save_unprocessed_output=False
+        data_train_df = train_df,
+        data_validation_df = val_df
     )
     test_stats = model.test(
-        data_df=data_df
+        data_df=test_df
     )
+    field = output_features[0]['name']
     # predictions need  to be list of lists containing each row data from the
     # prediction column
     prediction = test_stats[0].iloc[:, 0].tolist()
-    viz_outputs = ('pdf', 'png')
-    field = output_features[0]['name']
-    ground_truth = data_df[output_features[0]['name']]
     ground_truth_metadata = model.train_set_metadata
+    target_predictions = test_df[field]
+    ground_truth = [
+        ground_truth_metadata[field]['str2idx'][test_row]
+        for test_row in target_predictions
+    ]
+    viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
         visualize.compare_classifiers_performance_from_pred(
@@ -258,7 +261,7 @@ def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 1 == len(figure_cnt)
     model.close()
-    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+    # shutil.rmtree(model.exp_dir_name, ignore_errors=True)
 
 
 def test_compare_classifiers_performance_subset_vis_api(csv_filename):
