@@ -87,12 +87,7 @@ def test_learning_curves_vis_api(csv_filename):
     input_features[0]['encoder'] = encoder
     model = run_api_experiment(input_features, output_features)
     data_df = read_csv(data_csv)
-    train_stats = model.train(
-        data_df=data_df,
-        skip_save_processed_input=True,
-        skip_save_progress=True,
-        skip_save_unprocessed_output=True
-    )
+    train_stats = model.train(data_df=data_df)
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
@@ -124,15 +119,8 @@ def test_compare_performance_vis_api(csv_filename):
     input_features[0]['encoder'] = encoder
     model = run_api_experiment(input_features, output_features)
     data_df = read_csv(data_csv)
-    model.train(
-        data_df=data_df,
-        skip_save_processed_input=True,
-        skip_save_progress=True,
-        skip_save_unprocessed_output=True
-    )
-    test_stats = model.test(
-        data_df=data_df
-    )[1]
+    model.train(ata_df=data_df)
+    test_stats = model.test(data_df=data_df)[1]
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
@@ -185,10 +173,10 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
 
     ground_truth_metadata = model.train_set_metadata
     target_predictions = test_df[field]
-    ground_truth = [
+    ground_truth = np.asarray([
         ground_truth_metadata[field]['str2idx'][test_row]
         for test_row in target_predictions
-    ]
+    ])
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
@@ -242,10 +230,10 @@ def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
     prediction = test_stats[0].iloc[:, 0].tolist()
     ground_truth_metadata = model.train_set_metadata
     target_predictions = test_df[field]
-    ground_truth = [
+    ground_truth = np.asarray([
         ground_truth_metadata[field]['str2idx'][test_row]
         for test_row in target_predictions
-    ]
+    ])
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
