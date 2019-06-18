@@ -27,9 +27,11 @@ from tests.integration_tests.utils import generate_data
 from tests.integration_tests.utils import sequence_feature
 from tests.integration_tests.utils import text_feature
 from unittest import mock
-
+from ludwig.data.preprocessing import _preprocess_csv_for_training, get_split
 # The following imports are pytest fixtures, required for running the tests
 from tests.fixtures.filenames import csv_filename
+from ludwig.utils.data_utils import load_json, load_from_file, split_dataset_tvt
+
 
 
 def run_api_experiment(input_features, output_features):
@@ -144,27 +146,43 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
     ]
     output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
     encoder = 'cnnrnn'
-
+    #1. Split data in to train , val and test
+    #2. Train model on train data on valdiration data
+    #3. On the test set i do model.test
     # Generate test data
     data_csv = generate_data(input_features, output_features, csv_filename)
+
     input_features[0]['encoder'] = encoder
     model = run_api_experiment(input_features, output_features)
+
     data_df = read_csv(data_csv)
+    # Obtaim data split array mapping rows to split type
+    # 0-train, 1-validation, 2-test
+    data_split = get_split(data_df)
+    train_split, test_split, val_split = split_dataset_tvt(data_df, data_split)
+    # Splits are python dictionaries not dataframes- they need to be converted.
+    test_df = pd.DataFrame(test_split)
+    train_df = pd.DataFrame(train_split)
+    val_df = pd.DataFrame(val_split)
     model.train(
-        data_df=data_df,
-        skip_save_processed_input=True,
-        skip_save_progress=True,
-        skip_save_unprocessed_output=True
+        data_train_df = train_df,
+        data_validation_df = val_df
     )
     test_stats = model.test(
-        data_df=data_df
+        data_df=test_df
     )
-    # probabilities need  to be list of lists containing each row data from the
-    # probability columns
-    probability = test_stats[0].iloc[:, 2:].values
-    viz_outputs = ('pdf', 'png')
+
     field = output_features[0]['name']
-    ground_truth = data_df[output_features[0]['name']]
+    # probabilities need to be list of lists containing each row data from the
+    # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
+    probability = test_stats[0].iloc[:, 2:].values
+    target_predictions = test_df[field]
+    viz_outputs = ('pdf', 'png')
+    ground_truth_metadata = model.train_set_metadata
+    ground_truth = [
+        ground_truth_metadata[field]['str2idx'][test_row]
+        for test_row in target_predictions
+    ]
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
         visualize.compare_classifiers_performance_from_prob(
@@ -234,4 +252,58 @@ def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 1 == len(figure_cnt)
     model.close()
-    # shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+
+
+def test_compare_classifiers_performance_subset_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    # Single sequence input, single category output
+    input_features = [
+        text_feature(vocab_size=10, min_len=1, representation='sparse'),
+        categorical_feature(
+            vocab_size=10,
+            loss='sampled_softmax_cross_entropy'
+        )
+    ]
+    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
+    encoder = 'cnnrnn'
+
+    # Generate test data
+    data_csv = generate_data(input_features, output_features, csv_filename)
+    input_features[0]['encoder'] = encoder
+    model = run_api_experiment(input_features, output_features)
+    data_df = read_csv(data_csv)
+    model.train(
+        data_df=data_df,
+        skip_save_processed_input=True,
+        skip_save_progress=True,
+        skip_save_unprocessed_output=True
+    )
+    test_stats = model.test(
+        data_df=data_df
+    )
+    # probabilities need  to be list of lists containing each row data from the
+    # probability columns
+    probability = test_stats[0].iloc[:, 2:].values
+    viz_outputs = ('pdf', 'png')
+    ground_truth = data_df[output_features[0]['name']]
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        visualize.compare_classifiers_performance_subset(
+            [probability, probability],
+            ground_truth,
+            top_n_classes=[0],
+            labels_limit=0,
+            subset='ground_truth',
+            model_name = ['Model1', 'Model2'],
+            output_directory=model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 1 == len(figure_cnt)
+    model.close()
+    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
