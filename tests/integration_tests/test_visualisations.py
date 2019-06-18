@@ -303,8 +303,8 @@ def test_visualisation_compare_classifiers_from_prob_output_saved(csv_filename):
     for command, viz_pattern in zip(commands, vis_patterns):
         result = subprocess.run(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            # stdout=subprocess.PIPE,
+            # stderr=subprocess.PIPE
         )
         figure_cnt = glob.glob(viz_pattern)
 
@@ -374,8 +374,8 @@ def test_visualisation_compare_classifiers_from_pred_output_saved(csv_filename):
     for command, viz_pattern in zip(commands, vis_patterns):
         result = subprocess.run(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            # stdout=subprocess.PIPE,
+            # stderr=subprocess.PIPE
         )
         figure_cnt = glob.glob(viz_pattern)
 
@@ -444,8 +444,8 @@ def test_visualisation_compare_classifiers_subset_output_saved(csv_filename):
     for command, viz_pattern in zip(commands, vis_patterns):
         result = subprocess.run(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            # stdout=subprocess.PIPE,
+            # stderr=subprocess.PIPE
         )
         figure_cnt = glob.glob(viz_pattern)
 

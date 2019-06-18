@@ -119,7 +119,7 @@ def test_compare_performance_vis_api(csv_filename):
     input_features[0]['encoder'] = encoder
     model = run_api_experiment(input_features, output_features)
     data_df = read_csv(data_csv)
-    model.train(ata_df=data_df)
+    model.train(data_df=data_df)
     test_stats = model.test(data_df=data_df)[1]
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
@@ -311,3 +311,4 @@ def test_compare_classifiers_performance_subset_vis_api(csv_filename):
         assert 1 == len(figure_cnt)
     model.close()
     shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+
