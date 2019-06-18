@@ -17,6 +17,7 @@
 import shutil
 import glob
 import pandas as pd
+import numpy as np
 
 from ludwig.api import LudwigModel
 from ludwig.utils.data_utils import read_csv
@@ -285,27 +286,33 @@ def test_compare_classifiers_performance_subset_vis_api(csv_filename):
     data_csv = generate_data(input_features, output_features, csv_filename)
     input_features[0]['encoder'] = encoder
     model = run_api_experiment(input_features, output_features)
-    data_df = read_csv(data_csv)
+    test_df, train_df, val_df = obtain_df_splits(data_csv)
     model.train(
-        data_df=data_df,
-        skip_save_processed_input=True,
-        skip_save_progress=True,
-        skip_save_unprocessed_output=True
+        data_train_df=train_df,
+        data_validation_df=val_df
     )
     test_stats = model.test(
-        data_df=data_df
+        data_df=test_df
     )
-    # probabilities need  to be list of lists containing each row data from the
-    # probability columns
+
+    field = output_features[0]['name']
+    # probabilities need to be list of lists containing each row data from the
+    # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
     probability = test_stats[0].iloc[:, 2:].values
+
+    ground_truth_metadata = model.train_set_metadata
+    target_predictions = test_df[field]
+    ground_truth = np.asarray([
+        ground_truth_metadata[field]['str2idx'][test_row]
+        for test_row in target_predictions
+    ])
     viz_outputs = ('pdf', 'png')
-    ground_truth = data_df[output_features[0]['name']]
     for viz_output in viz_outputs:
         vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
         visualize.compare_classifiers_performance_subset(
             [probability, probability],
             ground_truth,
-            top_n_classes=[0],
+            top_n_classes=[6],
             labels_limit=0,
             subset='ground_truth',
             model_name = ['Model1', 'Model2'],
