@@ -52,6 +52,24 @@ def run_api_experiment(input_features, output_features):
     model = LudwigModel(model_definition)
     return model
 
+def obtain_df_splits(data_csv):
+    """Split input data csv file in to train, validation and test dataframes.
+
+    :param data_csv: Input data CSV file.
+    :return test_df, train_df, val_df: Train, validation and test dataframe
+            splits
+    """
+    data_df = read_csv(data_csv)
+    # Obtain data split array mapping data rows to split type
+    # 0-train, 1-validation, 2-test
+    data_split = get_split(data_df)
+    train_split, test_split, val_split = split_dataset_tvt(data_df, data_split)
+    # Splits are python dictionaries not dataframes- they need to be converted.
+    test_df = pd.DataFrame(test_split)
+    train_df = pd.DataFrame(train_split)
+    val_df = pd.DataFrame(val_split)
+    return test_df, train_df, val_df
+
 def test_learning_curves_vis_api(csv_filename):
     """Ensure pdf and png figures can be saved via visualisation API call.
 
@@ -146,24 +164,12 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
     ]
     output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
     encoder = 'cnnrnn'
-    #1. Split data in to train , val and test
-    #2. Train model on train data on valdiration data
-    #3. On the test set i do model.test
-    # Generate test data
     data_csv = generate_data(input_features, output_features, csv_filename)
 
     input_features[0]['encoder'] = encoder
     model = run_api_experiment(input_features, output_features)
 
-    data_df = read_csv(data_csv)
-    # Obtaim data split array mapping rows to split type
-    # 0-train, 1-validation, 2-test
-    data_split = get_split(data_df)
-    train_split, test_split, val_split = split_dataset_tvt(data_df, data_split)
-    # Splits are python dictionaries not dataframes- they need to be converted.
-    test_df = pd.DataFrame(test_split)
-    train_df = pd.DataFrame(train_split)
-    val_df = pd.DataFrame(val_split)
+    test_df, train_df, val_df = obtain_df_splits(data_csv)
     model.train(
         data_train_df = train_df,
         data_validation_df = val_df
