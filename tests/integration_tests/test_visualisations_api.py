@@ -370,3 +370,42 @@ def test_compare_classifiers_performance_changing_k_vis_api(csv_filename):
     model.close()
     shutil.rmtree(model.exp_dir_name, ignore_errors=True)
 
+
+def test_ccompare_classifiers_multiclass_multimetric_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    # Single sequence input, single category output
+    input_features = [sequence_feature(reduce_output='sum')]
+    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
+    encoder = 'cnnrnn'
+
+    # Generate test data
+    data_csv = generate_data(input_features, output_features, csv_filename)
+    input_features[0]['encoder'] = encoder
+    model = run_api_experiment(input_features, output_features)
+    data_df = read_csv(data_csv)
+    model.train(data_df=data_df)
+    test_stats = model.test(data_df=data_df)[1]
+
+    field = output_features[0]['name']
+    ground_truth_metadata = model.train_set_metadata
+
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        visualize.compare_classifiers_multiclass_multimetric(
+            [test_stats, test_stats],
+            ground_truth_metadata,
+            field,
+            top_n_classes=[6],
+            model_name = ['Model1', 'Model2'],
+            output_directory=model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 4 == len(figure_cnt)
+    model.close()
+    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
