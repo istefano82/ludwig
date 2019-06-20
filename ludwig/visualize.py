@@ -45,10 +45,10 @@ def load_data_for_viz(load_type, model_file_statistics, *args, **kwargs):
            model experiment stats.
     :return List of training statistics loaded as json objects.
     """
-    SUPPORTED_LOAD_TYPES = {
-        'load_json': load_json,
-        'load_from_file': partial(load_from_file, dtype=kwargs['dtype'])
-    }
+    SUPPORTED_LOAD_TYPES = dict(load_json=load_json,
+                                load_from_file=partial(load_from_file,
+                                                       dtype=kwargs.get('dtype',
+                                                                        None)))
     loader = SUPPORTED_LOAD_TYPES[load_type]
     try:
         stats_per_model = [loader(stats_f)
@@ -234,9 +234,8 @@ def compare_classifiers_performance_from_prob(
         file_format='pdf',
         **kwargs
 ):
-
     k = top_n_classes[0]
-
+    model_names_list = convert_to_list(model_names)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
 
@@ -282,7 +281,7 @@ def compare_classifiers_performance_from_prob(
     visualization_utils.compare_classifiers_plot(
         [accuracies, hits_at_ks, mrrs],
         [ACCURACY, HITS_AT_K, 'mrr'],
-        model_names,
+        model_names_list,
         filename=filename
     )
 
@@ -445,7 +444,7 @@ def compare_classifiers_performance_changing_k(
     probs = probs_per_model
 
     hits_at_ks = []
-
+    model_names_list = convert_to_list(model_names)
     for i, prob in enumerate(probs):
 
         if labels_limit > 0 and prob.shape[1] > labels_limit + 1:
@@ -472,50 +471,42 @@ def compare_classifiers_performance_changing_k(
     visualization_utils.compare_classifiers_line_plot(
         np.arange(1, k + 1),
         hits_at_ks, 'hits@k',
-        model_names,
+        model_names_list,
         title='Classifier comparison (hits@k)',
         filename=filename
     )
 
 
 def compare_classifiers_multiclass_multimetric(
-        test_statistics,
+        test_stats_per_model,
+        metadata,
         field,
-        ground_truth_metadata,
         top_n_classes,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(test_statistics) < 1:
-        logging.error('No test_statistics provided')
-        return
+    filename_template = 'compare_classifiers_multiclass_multimetric_{}_{}_{}.' \
+                        + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
 
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'compare_classifiers_multiclass_multimetric_{}_{}_{}.' + file_format
-        )
-
-    metadata = load_json(ground_truth_metadata)
-    test_statistics_per_model_name = [load_json(test_statistics_f)
-                                      for test_statistics_f in
-                                      test_statistics]
-
-    fields_set = set()
-    for ls in test_statistics_per_model_name:
-        for key in ls:
-            fields_set.add(key)
-    fields = [field] if field is not None and len(field) > 0 else fields_set
+    test_stats_per_model_list = convert_to_list(test_stats_per_model)
+    model_names_list = convert_to_list(model_names)
+    fields = validate_visualisation_prediction_field_from_test_stats(
+        field,
+        test_stats_per_model_list
+    )
 
     for i, test_statistics in enumerate(
-            test_statistics_per_model_name):
+            test_stats_per_model_list):
         for field in fields:
             model_name_name = (
-                model_names[i]
-                if model_names is not None and i < len(model_names)
+                model_names_list[i]
+                if model_names_list is not None and i < len(model_names_list)
                 else ''
             )
             if 'per_class_stats' not in test_statistics[field]:
@@ -546,9 +537,9 @@ def compare_classifiers_multiclass_multimetric(
                 ls = labels[0:k]
 
                 filename = None
-                if filename_template:
+                if filename_template_path:
                     os.makedirs(output_directory, exist_ok=True)
-                    filename = filename_template.format(
+                    filename = filename_template_path.format(
                         model_name_name, field, 'top{}'.format(k)
                     )
 
@@ -570,9 +561,9 @@ def compare_classifiers_multiclass_multimetric(
                 sorted_indices = f1_np.argsort()
                 higher_f1s = sorted_indices[-k:][::-1]
                 filename = None
-                if filename_template:
+                if filename_template_path:
                     os.makedirs(output_directory, exist_ok=True)
-                    filename = filename_template.format(
+                    filename = filename_template_path.format(
                         model_name_name, field, 'best{}'.format(k)
                     )
                 visualization_utils.compare_classifiers_multiclass_multimetric_plot(
@@ -588,8 +579,8 @@ def compare_classifiers_multiclass_multimetric(
                 )
                 lower_f1s = sorted_indices[:k]
                 filename = None
-                if filename_template:
-                    filename = filename_template.format(
+                if filename_template_path:
+                    filename = filename_template_path.format(
                         model_name_name, field, 'worst{}'.format(k)
                     )
                 visualization_utils.compare_classifiers_multiclass_multimetric_plot(
@@ -604,8 +595,8 @@ def compare_classifiers_multiclass_multimetric(
                 )
 
                 filename = None
-                if filename_template:
-                    filename = filename_template.format(
+                if filename_template_path:
+                    filename = filename_template_path.format(
                         model_name_name, field, 'sorted'
                     )
                 visualization_utils.compare_classifiers_multiclass_multimetric_plot(
@@ -2268,7 +2259,13 @@ def cli(sys_argv):
             probabilities_per_model, gt, **vars(args)
         )
     elif args.visualization == 'compare_classifiers_multiclass_multimetric':
-        compare_classifiers_multiclass_multimetric(**vars(args))
+        test_stats_per_model = load_data_for_viz(
+            'load_json', vars(args)['test_statistics']
+        )
+        metadata = load_json(vars(args)['ground_truth_metadata'])
+        compare_classifiers_multiclass_multimetric(
+            test_stats_per_model=test_stats_per_model, metadata=metadata, **vars(args)
+        )
     elif args.visualization == 'compare_classifiers_predictions':
         compare_classifiers_predictions(**vars(args))
     elif args.visualization == 'compare_classifiers_predictions_distribution':
