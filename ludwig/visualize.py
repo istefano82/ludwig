@@ -2232,8 +2232,7 @@ def cli(sys_argv):
             'load_json', vars(args)['test_statistics']
         )
         compare_performance(
-            test_stats_per_model=test_stats_per_model,
-            **vars(args)
+            test_stats_per_model, **vars(args)
         )
     elif args.visualization == 'compare_classifiers_performance_from_prob':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
@@ -2306,8 +2305,7 @@ def cli(sys_argv):
             'load_json', vars(args)['training_statistics']
         )
         learning_curves(
-            train_stats_per_model=train_stats_per_model,
-            **vars(args)
+            train_stats_per_model, **vars(args)
         )
     else:
         logging.info('Visualization argument not recognized')
