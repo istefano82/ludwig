@@ -747,36 +747,26 @@ def compare_classifiers_predictions(
         filename=filename
     )
 
-
 def compare_classifiers_predictions_distribution(
-        predictions,
-        ground_truth,
-        field,
+        preds_per_model,
+        gt,
         labels_limit,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(predictions) < 1:
-        logging.error('No predictions provided')
-        return
-
-    ground_truth = load_from_file(ground_truth, field)
+    model_names_list = convert_to_list(model_names)
     if labels_limit > 0:
-        ground_truth[ground_truth > labels_limit] = labels_limit
+        gt[gt > labels_limit] = labels_limit
+        for i in range(len(preds_per_model)):
+            preds_per_model[i][preds_per_model[i] > labels_limit] = labels_limit
 
-    predictions = [load_from_file(predictions_fn, dtype=int)
-                   for predictions_fn in predictions]
-    if labels_limit > 0:
-        for i in range(len(predictions)):
-            predictions[i][predictions[i] > labels_limit] = labels_limit
-
-    counts_gt = np.bincount(ground_truth)
+    counts_gt = np.bincount(gt)
     prob_gt = counts_gt / counts_gt.sum()
 
     counts_predictions = [np.bincount(alg_predictions)
-                          for alg_predictions in predictions]
+                          for alg_predictions in preds_per_model]
 
     prob_predictions = [alg_count_prediction / alg_count_prediction.sum()
                         for alg_count_prediction in counts_predictions]
@@ -792,7 +782,7 @@ def compare_classifiers_predictions_distribution(
     visualization_utils.radar_chart(
         prob_gt,
         prob_predictions,
-        model_names,
+        model_names_list,
         filename=filename
     )
 
@@ -2267,7 +2257,13 @@ def cli(sys_argv):
             preds_per_model, gt, **vars(args)
         )
     elif args.visualization == 'compare_classifiers_predictions_distribution':
-        compare_classifiers_predictions_distribution(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        preds_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['predictions'], dtype=str
+        )
+        compare_classifiers_predictions_distribution(
+            preds_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'confidence_thresholding':
         confidence_thresholding(**vars(args))
     elif args.visualization == 'confidence_thresholding_data_vs_acc':
