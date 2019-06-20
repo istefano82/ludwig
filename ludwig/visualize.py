@@ -631,33 +631,25 @@ def compare_classifiers_multiclass_multimetric(
 
 
 def compare_classifiers_predictions(
-        predictions,
-        ground_truth,
-        field,
+        preds_per_model,
+        gt,
         labels_limit,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(predictions) < 2:
-        logging.error('No predictions provided')
-        return
-
-    ground_truth_fn = ground_truth
-    ground_truth_field = field
-    predictions_1_fn = predictions[0]
-    predictions_2_fn = predictions[1]
+    model_names_list = convert_to_list(model_names)
     name_c1 = (
-        model_names[0] if model_names is not None and len(model_names) > 0
+        model_names_list[0] if model_names is not None and len(model_names) > 0
         else 'c1')
     name_c2 = (
-        model_names[1] if model_names is not None and len(model_names) > 1
+        model_names_list[1] if model_names is not None and len(model_names) > 1
         else 'c2')
 
-    gt = load_from_file(ground_truth_fn, ground_truth_field)
-    pred_c1 = load_from_file(predictions_1_fn, dtype=int)
-    pred_c2 = load_from_file(predictions_2_fn, dtype=int)
+
+    pred_c1 = preds_per_model[0]
+    pred_c2 = preds_per_model[1]
 
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
@@ -2267,7 +2259,13 @@ def cli(sys_argv):
             test_stats_per_model=test_stats_per_model, metadata=metadata, **vars(args)
         )
     elif args.visualization == 'compare_classifiers_predictions':
-        compare_classifiers_predictions(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        preds_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['predictions'], dtype=str
+        )
+        compare_classifiers_predictions(
+            preds_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'compare_classifiers_predictions_distribution':
         compare_classifiers_predictions_distribution(**vars(args))
     elif args.visualization == 'confidence_thresholding':
