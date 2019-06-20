@@ -430,9 +430,8 @@ def compare_classifiers_performance_subset(
 
 
 def compare_classifiers_performance_changing_k(
-        probabilities,
-        ground_truth,
-        field,
+        probs_per_model,
+        gt,
         top_k,
         labels_limit,
         model_names=None,
@@ -440,18 +439,10 @@ def compare_classifiers_performance_changing_k(
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 1:
-        logging.error('No probabilities provided')
-        return
-
     k = top_k
-
-    gt = load_from_file(ground_truth, field)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
-
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
+    probs = probs_per_model
 
     hits_at_ks = []
 
@@ -2270,7 +2261,13 @@ def cli(sys_argv):
             probabilities_per_model, gt, **vars(args)
         )
     elif args.visualization == 'compare_classifiers_performance_changing_k':
-        compare_classifiers_performance_changing_k(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        compare_classifiers_performance_changing_k(
+            probabilities_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'compare_classifiers_multiclass_multimetric':
         compare_classifiers_multiclass_multimetric(**vars(args))
     elif args.visualization == 'compare_classifiers_predictions':
