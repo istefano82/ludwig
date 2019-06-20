@@ -302,7 +302,7 @@ def compare_classifiers_performance_from_pred(
         gt[gt > labels_limit] = labels_limit
 
     preds = preds_per_model
-
+    model_names_list = convert_to_list(model_names)
     mapped_preds = []
     for pred in preds:
         mapped_preds.append([metadata[field]['str2idx'][val] for val in pred])
@@ -331,7 +331,7 @@ def compare_classifiers_performance_from_pred(
     visualization_utils.compare_classifiers_plot(
         [accuracies, precisions, recalls, f1s],
         [ACCURACY, 'precision', 'recall', 'f1'],
-        model_names,
+        model_names_list,
         filename=filename
     )
 
@@ -348,7 +348,7 @@ def compare_classifiers_performance_subset(
         **kwargs
 ):
     k = top_n_classes[0]
-
+    model_names_list = convert_to_list(model_names)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
 
@@ -422,7 +422,7 @@ def compare_classifiers_performance_subset(
     visualization_utils.compare_classifiers_plot(
         [accuracies, hits_at_ks],
         [ACCURACY, HITS_AT_K],
-        model_names,
+        model_names_list,
         title=title,
         filename=filename
     )
