@@ -36,6 +36,28 @@ from ludwig.utils.data_utils import load_json, load_from_file
 from ludwig.utils.print_utils import logging_level_registry
 
 
+def validate_conf_treshholds_and_probabilities_2d_3d(
+        probabilities, treshhold_fields
+):
+    """Ensure probabilities and treshhold fields arrays have two members each.
+
+    :param probabilities: List of probabilities per model
+    :param treshhold_fields: List of treshhold fields per model
+    :raise: RuntimeError
+    """
+    validation_mapping = {
+        'probabilities': probabilities,
+        'treshhold_fields': treshhold_fields
+    }
+    for item, value in validation_mapping.items():
+        item_len = len(value)
+        if not item_len == 2:
+            exception_message = 'Two {} should be provided - {} was given.'.format(
+                item,
+                item_len
+            )
+            logging.error(exception_message)
+            raise RuntimeError(exception_message)
 
 def load_data_for_viz(load_type, model_file_statistics, *args, **kwargs):
     """Load model file data in to list of .
@@ -1097,8 +1119,8 @@ def confidence_thresholding_data_vs_acc_subset_per_class(
 
 
 def confidence_thresholding_2thresholds_2d(
-        probabilities,
-        ground_truth,
+        probs_per_model,
+        ground_truths,
         threshold_fields,
         labels_limit,
         model_names=None,
@@ -1106,35 +1128,27 @@ def confidence_thresholding_2thresholds_2d(
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 2:
-        logging.error('Not enough probabilities provided, two are needed')
-        return
-    if len(probabilities) > 2:
-        logging.error('Too many probabilities provided, only two are needed')
-        return
-    if len(threshold_fields) < 2:
-        logging.error('Not enough threshold fields provided, two are needed')
-        return
-    if len(threshold_fields) > 2:
-        logging.error('Too many threshold fields provided, only two are needed')
-        return
-
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'confidence_thresholding_2thresholds_2d_{}.' + file_format
+    try:
+        validate_conf_treshholds_and_probabilities_2d_3d(
+            probs_per_model,
+            threshold_fields
         )
-
-    gt_1 = load_from_file(ground_truth, threshold_fields[0])
-    gt_2 = load_from_file(ground_truth, threshold_fields[1])
+    except RuntimeError:
+        return
+    probs = probs_per_model
+    model_names_list = convert_to_list(model_names)
+    filename_template = 'confidence_thresholding_2thresholds_2d_{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
+    gt_1 = ground_truths[0]
+    gt_2 = ground_truths[1]
 
     if labels_limit > 0:
         gt_1[gt_1 > labels_limit] = labels_limit
         gt_2[gt_2 > labels_limit] = labels_limit
 
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
 
     thresholds = [t / 100 for t in range(0, 101, 5)]
     fixed_step_coverage = thresholds
@@ -1212,13 +1226,13 @@ def confidence_thresholding_2thresholds_2d(
     # Multiline #
     # ===========#
     filename = None
-    if filename_template:
+    if filename_template_path:
         os.makedirs(output_directory, exist_ok=True)
-        filename = filename_template.format('multiline')
+        filename = filename_template_path.format('multiline')
     visualization_utils.confidence_fitlering_data_vs_acc_multiline_plot(
         accuracies,
         dataset_kept,
-        model_names,
+        model_names_list,
         title='Coverage vs Accuracy, two thresholds',
         filename=filename
     )
@@ -1227,13 +1241,13 @@ def confidence_thresholding_2thresholds_2d(
     # Max line #
     # ==========#
     filename = None
-    if filename_template:
-        filename = filename_template.format('maxline')
+    if filename_template_path:
+        filename = filename_template_path.format('maxline')
     max_accuracies = np.amax(np.array(interps), 0)
     visualization_utils.confidence_fitlering_data_vs_acc_plot(
         [max_accuracies],
         [thresholds],
-        model_names,
+        model_names_list,
         title='Coverage vs Accuracy, two thresholds',
         filename=filename
     )
@@ -1255,13 +1269,13 @@ def confidence_thresholding_2thresholds_2d(
                                              selected_acc.shape)
         t1_maxes.append(thresholds[threshold_indices[0]])
         t2_maxes.append(thresholds[threshold_indices[1]])
-    model_name = model_names[0] if model_names is not None and len(
-        model_names) > 0 else ''
+    model_name = model_names_list[0] if model_names_list is not None and len(
+        model_names_list) > 0 else ''
 
     filename = None
-    if filename_template:
+    if filename_template_path:
         os.makedirs(output_directory, exist_ok=True)
-        filename = filename_template.format('maxline_with_thresholds')
+        filename = filename_template_path.format('maxline_with_thresholds')
 
     visualization_utils.confidence_fitlering_data_vs_acc_plot(
         [max_accuracies, t1_maxes, t2_maxes],
@@ -2266,7 +2280,20 @@ def cli(sys_argv):
             probabilities_per_model, gt, metadata, **vars(args)
         )
     elif args.visualization == 'confidence_thresholding_2thresholds_2d':
-        confidence_thresholding_2thresholds_2d(**vars(args))
+        gt1 = load_from_file(
+            vars(args)['ground_truth'],
+            vars(args)['threshold_fields'][0]
+        )
+        gt2 = load_from_file(
+            vars(args)['ground_truth'],
+            vars(args)['threshold_fields'][1]
+        )
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        confidence_thresholding_2thresholds_2d(
+            probabilities_per_model, [gt1, gt2], **vars(args)
+        )
     elif args.visualization == 'confidence_thresholding_2thresholds_3d':
         confidence_thresholding_2thresholds_3d(**vars(args))
     elif args.visualization == 'binary_threshold_vs_metric':

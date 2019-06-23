@@ -19,17 +19,17 @@ import glob
 import pandas as pd
 import numpy as np
 
-from ludwig.api import LudwigModel
-from ludwig.utils.data_utils import read_csv
 from ludwig import visualize
-from tests.integration_tests.utils import categorical_feature
-from tests.integration_tests.utils import generate_data
-from tests.integration_tests.utils import sequence_feature
-from tests.integration_tests.utils import text_feature
+from ludwig.api import LudwigModel
 from ludwig.data.preprocessing import _preprocess_csv_for_training, get_split
+from ludwig.utils.data_utils import read_csv, load_json, load_from_file, \
+    split_dataset_tvt
+
+from tests.integration_tests.utils import categorical_feature, \
+    numerical_feature, set_feature, generate_data, sequence_feature, \
+    text_feature
 # The following imports are pytest fixtures, required for running the tests
 from tests.fixtures.filenames import csv_filename
-from ludwig.utils.data_utils import load_json, load_from_file, split_dataset_tvt
 
 
 
@@ -183,7 +183,7 @@ def test_compare_performance_vis_api(csv_filename):
         visualize.compare_performance(
             [test_stats, test_stats],
             field=None,
-            model_name = ['Model1', 'Model2'],
+            model_namess = ['Model1', 'Model2'],
             output_directory=model.exp_dir_name,
             file_format=viz_output
         )
@@ -240,7 +240,7 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
             ground_truth,
             top_n_classes=[0],
             labels_limit=0,
-            model_name = ['Model1', 'Model2'],
+            model_namess = ['Model1', 'Model2'],
             output_directory=model.exp_dir_name,
             file_format=viz_output
         )
@@ -297,7 +297,7 @@ def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
             ground_truth_metadata,
             field,
             labels_limit=0,
-            model_name = ['Model1', 'Model2'],
+            model_namess = ['Model1', 'Model2'],
             output_directory=model.exp_dir_name,
             file_format=viz_output
         )
@@ -356,7 +356,7 @@ def test_compare_classifiers_performance_subset_vis_api(csv_filename):
             top_n_classes=[6],
             labels_limit=0,
             subset='ground_truth',
-            model_name = ['Model1', 'Model2'],
+            model_namess = ['Model1', 'Model2'],
             output_directory=model.exp_dir_name,
             file_format=viz_output
         )
@@ -413,7 +413,7 @@ def test_compare_classifiers_performance_changing_k_vis_api(csv_filename):
             ground_truth,
             top_k=3,
             labels_limit=0,
-            model_name = ['Model1', 'Model2'],
+            model_namess = ['Model1', 'Model2'],
             output_directory=model.exp_dir_name,
             file_format=viz_output
         )
@@ -452,7 +452,7 @@ def test_compare_classifiers_multiclass_multimetric_vis_api(csv_filename):
             ground_truth_metadata,
             field,
             top_n_classes=[6],
-            model_name = ['Model1', 'Model2'],
+            model_namess = ['Model1', 'Model2'],
             output_directory=model.exp_dir_name,
             file_format=viz_output
         )
@@ -511,7 +511,7 @@ def test_compare_classifiers_predictions_vis_api(csv_filename):
             [prediction, prediction],
             ground_truth,
             labels_limit=0,
-            model_name = ['Model1', 'Model2'],
+            model_names = ['Model1', 'Model2'],
             output_directory=model.exp_dir_name,
             file_format=viz_output
         )
@@ -570,7 +570,7 @@ def test_compare_classifiers_predictions_distribution_vis_api(csv_filename):
             [prediction, prediction],
             ground_truth,
             labels_limit=0,
-            model_name = ['Model1', 'Model2'],
+            model_names = ['Model1', 'Model2'],
             output_directory=model.exp_dir_name,
             file_format=viz_output
         )
@@ -596,7 +596,7 @@ def test_confidence_thresholding_vis_api(csv_filename):
             [probability, probability],
             experiment.ground_truth,
             labels_limit=0,
-            model_name = ['Model1', 'Model2'],
+            model_names = ['Model1', 'Model2'],
             output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
@@ -621,7 +621,7 @@ def test_confidence_thresholding_vis_api(csv_filename):
             [probability, probability],
             experiment.ground_truth,
             labels_limit=0,
-            model_name = ['Model1', 'Model2'],
+            model_names = ['Model1', 'Model2'],
             output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
@@ -648,7 +648,7 @@ def test_confidence_thresholding_data_vs_acc_subset_vis_api(csv_filename):
             top_n_classes=[3],
             labels_limit=0,
             subset='ground_truth',
-            model_name = ['Model1', 'Model2'],
+            model_names = ['Model1', 'Model2'],
             output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
@@ -679,7 +679,7 @@ def test_confidence_thresholding_data_vs_acc_subset_per_class_vis_api(
             top_n_classes=[3],
             labels_limit=0,
             subset='ground_truth',
-            model_name = ['Model1', 'Model2'],
+            model_names = ['Model1', 'Model2'],
             output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
@@ -688,3 +688,69 @@ def test_confidence_thresholding_data_vs_acc_subset_per_class_vis_api(
         # hence one figure per class
         assert 3 == len(figure_cnt)
     shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
+
+def test_confidence_thresholding_2thresholds_2d_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    input_features = [
+        text_feature(vocab_size=100, min_len=1, encoder='stacked_cnn'),
+        numerical_feature(),
+        categorical_feature(vocab_size=10, embedding_size=5),
+        set_feature(),
+        sequence_feature(vocab_size=10, max_len=10, encoder='embed')
+    ]
+    output_features = [
+        categorical_feature(vocab_size=2, reduce_input='sum'),
+        categorical_feature(vocab_size=2, reduce_input='sum')
+    ]
+    encoder = 'cnnrnn'
+    # Generate test data
+    data_csv = generate_data(input_features, output_features, csv_filename)
+    input_features[0]['encoder'] = encoder
+    model = run_api_experiment(input_features, output_features)
+    test_df, train_df, val_df = obtain_df_splits(data_csv)
+    model.train(
+        data_train_df=train_df,
+        data_validation_df=val_df
+    )
+    test_stats = model.test(
+        data_df=test_df
+    )
+
+    field1 = output_features[0]['name']
+    field2 = output_features[1]['name']
+    # probabilities need to be list of lists containing each row data from the
+    # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
+    probability1 = test_stats[0].iloc[:, [2,3,4]].values
+    probability2 = test_stats[0].iloc[:, [7,8,9]].values
+
+    ground_truth_metadata = model.train_set_metadata
+    target_predictions1 = test_df[field1]
+    target_predictions2 = test_df[field2]
+    ground_truth1 = np.asarray([
+        ground_truth_metadata[field1]['str2idx'][prediction]
+        for prediction in target_predictions1
+    ])
+    ground_truth2 = np.asarray([
+        ground_truth_metadata[field2]['str2idx'][prediction]
+        for prediction in target_predictions2
+    ])
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        visualize.confidence_thresholding_2thresholds_2d(
+            [probability1, probability2],
+            [ground_truth1, ground_truth2],
+            [field1, field2],
+            labels_limit=0,
+            model_names = ['Model1'],
+            output_directory=model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 3 == len(figure_cnt)
+    model.close()
+    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
