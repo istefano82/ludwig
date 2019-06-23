@@ -23,6 +23,7 @@ import logging
 import os
 import sys
 from functools import partial
+
 import numpy as np
 import sklearn
 from scipy.stats import entropy
@@ -1385,9 +1386,8 @@ def confidence_thresholding_2thresholds_3d(
 
 
 def binary_threshold_vs_metric(
-        probabilities,
-        ground_truth,
-        field,
+        probs_per_model,
+        gt,
         metrics,
         positive_label=1,
         model_names=None,
@@ -1395,27 +1395,20 @@ def binary_threshold_vs_metric(
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 1:
-        logging.error('No probabilities provided')
-        return
-
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'binary_threshold_vs_metric_{}.' + file_format
-        )
-
-    gt = load_from_file(ground_truth, field)
-
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
+    probs = probs_per_model
+    model_names_list = convert_to_list(model_names)
+    metrics_list = convert_to_list(metrics)
+    filename_template = 'binary_threshold_vs_metric_{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
 
     thresholds = [t / 100 for t in range(0, 101, 5)]
 
     supported_metrics = {'f1', 'precision', 'recall', 'accuracy'}
 
-    for metric in metrics:
+    for metric in metrics_list:
 
         if metric not in supported_metrics:
             logging.error("Metric {} not supported".format(metric))
@@ -1473,12 +1466,12 @@ def binary_threshold_vs_metric(
         filename = None
         if output_directory:
             os.makedirs(output_directory, exist_ok=True)
-            filename = filename_template.format(metric)
+            filename = filename_template_path.format(metric)
 
         visualization_utils.threshold_vs_metric_plot(
             thresholds,
             scores,
-            model_names,
+            model_names_list,
             title='Binary threshold vs {}'.format(metric),
             filename=filename
         )
@@ -2303,7 +2296,13 @@ def cli(sys_argv):
             probabilities_per_model, [gt1, gt2], **vars(args)
         )
     elif args.visualization == 'binary_threshold_vs_metric':
-        binary_threshold_vs_metric(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        binary_threshold_vs_metric(
+            probabilities_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'roc_curves':
         roc_curves(**vars(args))
     elif args.visualization == 'roc_curves_from_test_statistics':
