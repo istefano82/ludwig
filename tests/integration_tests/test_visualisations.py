@@ -1045,10 +1045,8 @@ def test_vis_confidence_thresholding_2thresholds_2d_output_saved(
     ]
     output_features = [
         categorical_feature(vocab_size=2, reduce_input='sum'),
-        sequence_feature(vocab_size=10, max_len=5),
-        numerical_feature()
+        categorical_feature(vocab_size=2, reduce_input='sum')
     ]
-
     # Generate test data
     rel_path = generate_data(input_features, output_features, csv_filename)
     encoder = 'cnnrnn'
@@ -1059,8 +1057,11 @@ def test_vis_confidence_thresholding_2thresholds_2d_output_saved(
     vis_output_pattern_png = exp_dir_name + '/*.png'
     treshhold_field1 = get_output_field_name(exp_dir_name)
     treshhold_field2 = get_output_field_name(exp_dir_name, output_feature=1)
-    probability = exp_dir_name + '/{}_probabilities.npy'.format(
+    probability1 = exp_dir_name + '/{}_probabilities.npy'.format(
         treshhold_field1
+    )
+    probability2 = exp_dir_name + '/{}_probabilities.npy'.format(
+        treshhold_field2
     )
     experiment_source_data_name = csv_filename.split('.')[0]
     ground_truth = experiment_source_data_name + '.hdf5'
@@ -1072,14 +1073,13 @@ def test_vis_confidence_thresholding_2thresholds_2d_output_saved(
                     '--ground_truth',
                     ground_truth,
                     '--probabilities',
-                    probability,
-                    probability,
+                    probability1,
+                    probability2,
                     '--threshold_fields',
                     treshhold_field1,
                     treshhold_field2,
                     '--model_names',
                     'Model1',
-                    'Model2',
                     '-od', exp_dir_name]
     test_cmd_png = test_cmd_pdf.copy() + ['-ff', 'png']
 
@@ -1089,8 +1089,6 @@ def test_vis_confidence_thresholding_2thresholds_2d_output_saved(
     for command, viz_pattern in zip(commands, vis_patterns):
         result = subprocess.run(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
         )
         figure_cnt = glob.glob(viz_pattern)
 
@@ -1121,10 +1119,8 @@ def test_vis_confidence_thresholding_2thresholds_3d_output_saved(csv_filename):
     ]
     output_features = [
         categorical_feature(vocab_size=2, reduce_input='sum'),
-        sequence_feature(vocab_size=10, max_len=5),
-        numerical_feature()
+        categorical_feature(vocab_size=2, reduce_input='sum')
     ]
-
     # Generate test data
     rel_path = generate_data(input_features, output_features, csv_filename)
     encoder = 'cnnrnn'
@@ -1135,8 +1131,11 @@ def test_vis_confidence_thresholding_2thresholds_3d_output_saved(csv_filename):
     vis_output_pattern_png = exp_dir_name + '/*.png'
     treshhold_field1 = get_output_field_name(exp_dir_name)
     treshhold_field2 = get_output_field_name(exp_dir_name, output_feature=1)
-    probability = exp_dir_name + '/{}_probabilities.npy'.format(
+    probability1 = exp_dir_name + '/{}_probabilities.npy'.format(
         treshhold_field1
+    )
+    probability2 = exp_dir_name + '/{}_probabilities.npy'.format(
+        treshhold_field2
     )
     experiment_source_data_name = csv_filename.split('.')[0]
     ground_truth = experiment_source_data_name + '.hdf5'
@@ -1148,14 +1147,11 @@ def test_vis_confidence_thresholding_2thresholds_3d_output_saved(csv_filename):
                     '--ground_truth',
                     ground_truth,
                     '--probabilities',
-                    probability,
-                    probability,
+                    probability1,
+                    probability2,
                     '--threshold_fields',
                     treshhold_field1,
                     treshhold_field2,
-                    '--model_names',
-                    'Model1',
-                    'Model2',
                     '-od', exp_dir_name]
     test_cmd_png = test_cmd_pdf.copy() + ['-ff', 'png']
 
@@ -1165,8 +1161,6 @@ def test_vis_confidence_thresholding_2thresholds_3d_output_saved(csv_filename):
     for command, viz_pattern in zip(commands, vis_patterns):
         result = subprocess.run(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
         )
         figure_cnt = glob.glob(viz_pattern)
 
