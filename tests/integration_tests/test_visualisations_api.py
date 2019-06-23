@@ -629,3 +629,29 @@ def test_confidence_thresholding_vis_api(csv_filename):
         assert 1 == len(figure_cnt)
     shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
+def test_confidence_thresholding_data_vs_acc_subset_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    experiment = Experiment(csv_filename)
+    probability = experiment.probability
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
+        visualize.confidence_thresholding_data_vs_acc_subset(
+            [probability, probability],
+            experiment.ground_truth,
+            top_n_classes=[3],
+            labels_limit=0,
+            subset='ground_truth',
+            model_name = ['Model1', 'Model2'],
+            output_directory=experiment.model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 1 == len(figure_cnt)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
