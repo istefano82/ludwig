@@ -1546,9 +1546,8 @@ def roc_curves_from_test_statistics(
 
 
 def calibration_1_vs_all(
-        probabilities,
-        ground_truth,
-        field,
+        probs_per_model,
+        gt,
         top_n_classes,
         labels_limit,
         model_names=None,
@@ -1556,22 +1555,15 @@ def calibration_1_vs_all(
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 1:
-        logging.error('No probabilities provided')
-        return
-
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'calibration_1_vs_all_{}.' + file_format
-        )
-
-    gt = load_from_file(ground_truth, field)
+    probs = probs_per_model
+    model_names_list = convert_to_list(model_names)
+    filename_template = 'calibration_1_vs_all_{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
     for i, prob in enumerate(probs):
         if labels_limit > 0 and prob.shape[1] > labels_limit + 1:
             prob_limit = prob[:, :labels_limit + 1]
@@ -1624,36 +1616,36 @@ def calibration_1_vs_all(
         filename = None
         if output_directory:
             os.makedirs(output_directory, exist_ok=True)
-            filename = filename_template.format(class_idx)
+            filename = filename_template_path.format(class_idx)
 
         visualization_utils.calibration_plot(
             fraction_positives_class,
             mean_predicted_vals_class,
-            model_names,
+            model_names_list,
             filename=filename
         )
 
         filename = None
         if output_directory:
             os.makedirs(output_directory, exist_ok=True)
-            filename = filename_template.format(
+            filename = filename_template_path.format(
                 'prediction_distribution_' + str(class_idx)
             )
 
         visualization_utils.predictions_distribution_plot(
             probs_class,
-            model_names,
+            model_names_list,
             filename=filename
         )
 
     filename = None
     if output_directory:
         os.makedirs(output_directory, exist_ok=True)
-        filename = filename_template.format('brier')
+        filename = filename_template_path.format('brier')
 
     visualization_utils.brier_plot(
         np.array(brier_scores),
-        model_names,
+        model_names_list,
         filename=filename
     )
 
@@ -2303,7 +2295,13 @@ def cli(sys_argv):
             test_stats_per_model, **vars(args)
         )
     elif args.visualization == 'calibration_1_vs_all':
-        calibration_1_vs_all(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        calibration_1_vs_all(
+            probabilities_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'calibration_multiclass':
         calibration_multiclass(**vars(args))
     elif args.visualization == 'confusion_matrix':
