@@ -1516,41 +1516,32 @@ def roc_curves(
 
 
 def roc_curves_from_test_statistics(
-        test_statistics,
+        test_stats_per_model,
         field,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(test_statistics) < 1:
-        logging.error('No prediction_statistics provided')
-        return
-
-    test_statistics_per_model_name = [load_json(test_statistics_f)
-                                      for test_statistics_f in
-                                      test_statistics]
+    model_names_list = convert_to_list(model_names)
+    filename_template = 'roc_curves_from_prediction_statistics.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
     fpr_tprs = []
-    for curr_test_statistics in test_statistics_per_model_name:
+    for curr_test_statistics in test_stats_per_model:
         fpr = curr_test_statistics[field]['roc_curve'][
             'false_positive_rate']
         tpr = curr_test_statistics[field]['roc_curve'][
             'true_positive_rate']
         fpr_tprs.append((fpr, tpr))
 
-    filename = None
-    if output_directory:
-        os.makedirs(output_directory, exist_ok=True)
-        filename = os.path.join(
-            output_directory,
-            'roc_curves_from_prediction_statistics.' + file_format
-        )
-
     visualization_utils.roc_curves(
         fpr_tprs,
-        model_names,
+        model_names_list,
         title='ROC curves',
-        filename=filename
+        filename=filename_template_path
     )
 
 
@@ -2305,7 +2296,12 @@ def cli(sys_argv):
             probabilities_per_model, gt, **vars(args)
         )
     elif args.visualization == 'roc_curves_from_test_statistics':
-        roc_curves_from_test_statistics(**vars(args))
+        test_stats_per_model = load_data_for_viz(
+            'load_json', vars(args)['test_statistics']
+        )
+        roc_curves_from_test_statistics(
+            test_stats_per_model, **vars(args)
+        )
     elif args.visualization == 'calibration_1_vs_all':
         calibration_1_vs_all(**vars(args))
     elif args.visualization == 'calibration_multiclass':
