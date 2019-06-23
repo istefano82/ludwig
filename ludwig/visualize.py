@@ -1478,23 +1478,16 @@ def binary_threshold_vs_metric(
 
 
 def roc_curves(
-        probabilities,
-        ground_truth,
-        field,
+        probs_per_model,
+        gt,
         positive_label=1,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 1:
-        logging.error('No probabilities provided')
-        return
-
-    gt = load_from_file(ground_truth, field)
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
-
+    probs = probs_per_model
+    model_names_list = convert_to_list(model_names)
     fpr_tprs = []
 
     for i, prob in enumerate(probs):
@@ -1516,7 +1509,7 @@ def roc_curves(
 
     visualization_utils.roc_curves(
         fpr_tprs,
-        model_names,
+        model_names_list,
         title='ROC curves',
         filename=filename
     )
@@ -2304,7 +2297,13 @@ def cli(sys_argv):
             probabilities_per_model, gt, **vars(args)
         )
     elif args.visualization == 'roc_curves':
-        roc_curves(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        roc_curves(
+            probabilities_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'roc_curves_from_test_statistics':
         roc_curves_from_test_statistics(**vars(args))
     elif args.visualization == 'calibration_1_vs_all':
