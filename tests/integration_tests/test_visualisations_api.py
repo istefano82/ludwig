@@ -27,7 +27,7 @@ from ludwig.utils.data_utils import read_csv, load_json, load_from_file, \
 
 from tests.integration_tests.utils import categorical_feature, \
     numerical_feature, set_feature, generate_data, sequence_feature, \
-    text_feature
+    text_feature, binary_feature, bag_feature
 # The following imports are pytest fixtures, required for running the tests
 from tests.fixtures.filenames import csv_filename
 
@@ -82,20 +82,20 @@ class Experiment:
             data_train_df=train_df,
             data_validation_df=val_df
         )
-        self.test_stats = self.model.test(
+        self.test_stats_full = self.model.test(
             data_df=test_df
         )
         self.field = self.output_features[0]['name']
         # probabilities need to be list of lists containing each row data from the
         # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
-        self.probability = self.test_stats[0].iloc[:, 2:].values
+        self.probability = self.test_stats_full[0].iloc[:, 2:].values
         self.ground_truth_metadata = self.model.train_set_metadata
         target_predictions = test_df[self.field]
         self.ground_truth = np.asarray([
             self.ground_truth_metadata[self.field]['str2idx'][test_row]
             for test_row in target_predictions
         ])
-        prediction_raw = self.test_stats[0].iloc[:, 0].tolist()
+        prediction_raw = self.test_stats_full[0].iloc[:, 0].tolist()
         self.prediction = np.asarray([
             self.ground_truth_metadata[self.field]['str2idx'][pred_row]
             for pred_row in prediction_raw])
@@ -871,3 +871,36 @@ def test_roc_curves_vis_api(csv_filename):
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 1 == len(figure_cnt)
     shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
+
+def test_roc_curves_from_test_statistics_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    input_features = [binary_feature(), bag_feature()]
+    output_features = [binary_feature()]
+    encoder = 'cnnrnn'
+
+    # Generate test data
+    data_csv = generate_data(input_features, output_features, csv_filename)
+    field = output_features[0]['name']
+    input_features[0]['encoder'] = encoder
+    model = run_api_experiment(input_features, output_features)
+    data_df = read_csv(data_csv)
+    model.train(data_df=data_df)
+    test_stats = model.test(data_df=data_df)[1]
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        visualize.roc_curves_from_test_statistics(
+            [test_stats, test_stats],
+            field,
+            model_namess = ['Model1', 'Model2'],
+            output_directory=model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 1 == len(figure_cnt)
+    model.close()
+    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
