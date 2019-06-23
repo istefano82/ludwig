@@ -1002,9 +1002,9 @@ def confidence_thresholding_data_vs_acc_subset(
 
 
 def confidence_thresholding_data_vs_acc_subset_per_class(
-        probabilities,
-        ground_truth,
-        ground_truth_metadata,
+        probs_per_model,
+        gt,
+        metadata,
         field,
         top_n_classes,
         labels_limit,
@@ -1014,25 +1014,16 @@ def confidence_thresholding_data_vs_acc_subset_per_class(
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 1:
-        logging.error('No probabilities provided')
-        return
-
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'confidence_thresholding_data_vs_acc_subset_per_class_{}.' + file_format
-        )
-
-    metadata = load_json(ground_truth_metadata)
+    filename_template = 'confidence_thresholding_data_vs_acc_subset_per_class_{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
     k = top_n_classes[0]
-    gt = load_from_file(ground_truth, field)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
-
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
+    probs = probs_per_model
+    model_names_list = convert_to_list(model_names)
 
     thresholds = [t / 100 for t in range(0, 101, 5)]
 
@@ -1061,8 +1052,8 @@ def confidence_thresholding_data_vs_acc_subset_per_class(
                 gt_subset = gt[subset_indices]
                 logging.info(
                     'Subset for model_name {} is {:.2f}% of the data'.format(
-                        model_names[i] if model_names and i < len(
-                            model_names) else i,
+                        model_names_list[i] if model_names_list and i < len(
+                            model_names_list) else i,
                         len(gt_subset) / len(gt) * 100
                     )
                 )
@@ -1092,12 +1083,12 @@ def confidence_thresholding_data_vs_acc_subset_per_class(
         field_name = metadata[field]['idx2str'][curr_k]
 
         filename = None
-        if filename_template:
+        if filename_template_path:
             os.makedirs(output_directory, exist_ok=True)
-            filename = filename_template.format(field_name)
+            filename = filename_template_path.format(field_name)
 
         visualization_utils.confidence_fitlering_data_vs_acc_plot(
-            accuracies, dataset_kept, model_names,
+            accuracies, dataset_kept, model_names_list,
             decimal_digits=2,
             title='Confidence_Thresholding (Data vs Accuracy) '
                   'for class {}'.format(field_name),
@@ -2266,7 +2257,14 @@ def cli(sys_argv):
         )
     elif (args.visualization ==
           'confidence_thresholding_data_vs_acc_subset_per_class'):
-        confidence_thresholding_data_vs_acc_subset_per_class(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        metadata = load_json(vars(args)['ground_truth_metadata'])
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        confidence_thresholding_data_vs_acc_subset_per_class(
+            probabilities_per_model, gt, metadata, **vars(args)
+        )
     elif args.visualization == 'confidence_thresholding_2thresholds_2d':
         confidence_thresholding_2thresholds_2d(**vars(args))
     elif args.visualization == 'confidence_thresholding_2thresholds_3d':
