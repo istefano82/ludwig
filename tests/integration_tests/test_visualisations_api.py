@@ -752,5 +752,68 @@ def test_confidence_thresholding_2thresholds_2d_vis_api(csv_filename):
         )
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 3 == len(figure_cnt)
-    model.close()
+    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+
+def test_confidence_thresholding_2thresholds_3d_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    input_features = [
+        text_feature(vocab_size=100, min_len=1, encoder='stacked_cnn'),
+        numerical_feature(),
+        categorical_feature(vocab_size=10, embedding_size=5),
+        set_feature(),
+        sequence_feature(vocab_size=10, max_len=10, encoder='embed')
+    ]
+    output_features = [
+        categorical_feature(vocab_size=2, reduce_input='sum'),
+        categorical_feature(vocab_size=2, reduce_input='sum')
+    ]
+    encoder = 'cnnrnn'
+    # Generate test data
+    data_csv = generate_data(input_features, output_features, csv_filename)
+    input_features[0]['encoder'] = encoder
+    model = run_api_experiment(input_features, output_features)
+    test_df, train_df, val_df = obtain_df_splits(data_csv)
+    model.train(
+        data_train_df=train_df,
+        data_validation_df=val_df
+    )
+    test_stats = model.test(
+        data_df=test_df
+    )
+
+    field1 = output_features[0]['name']
+    field2 = output_features[1]['name']
+    # probabilities need to be list of lists containing each row data from the
+    # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
+    probability1 = test_stats[0].iloc[:, [2,3,4]].values
+    probability2 = test_stats[0].iloc[:, [7,8,9]].values
+
+    ground_truth_metadata = model.train_set_metadata
+    target_predictions1 = test_df[field1]
+    target_predictions2 = test_df[field2]
+    ground_truth1 = np.asarray([
+        ground_truth_metadata[field1]['str2idx'][prediction]
+        for prediction in target_predictions1
+    ])
+    ground_truth2 = np.asarray([
+        ground_truth_metadata[field2]['str2idx'][prediction]
+        for prediction in target_predictions2
+    ])
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        visualize.confidence_thresholding_2thresholds_3d(
+            [probability1, probability2],
+            [ground_truth1, ground_truth2],
+            [field1, field2],
+            labels_limit=0,
+            output_directory=model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 1 == len(figure_cnt)
     shutil.rmtree(model.exp_dir_name, ignore_errors=True)
