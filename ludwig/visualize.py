@@ -1289,36 +1289,29 @@ def confidence_thresholding_2thresholds_2d(
 
 
 def confidence_thresholding_2thresholds_3d(
-        probabilities,
-        ground_truth,
+        probs_per_model,
+        ground_truths,
         threshold_fields,
         labels_limit,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 2:
-        logging.error('Not enough probabilities provided, two are needed')
+    try:
+        validate_conf_treshholds_and_probabilities_2d_3d(
+            probs_per_model,
+            threshold_fields
+        )
+    except RuntimeError:
         return
-    if len(probabilities) > 2:
-        logging.error('Too many probabilities provided, only two are needed')
-        return
-    if len(threshold_fields) < 2:
-        logging.error('Not enough threshold fields provided, two are needed')
-        return
-    if len(threshold_fields) > 2:
-        logging.error('Too many threshold fields provided, only two are needed')
-        return
+    probs = probs_per_model
+    gt_1 = ground_truths[0]
+    gt_2 = ground_truths[1]
 
-    gt_1 = load_from_file(ground_truth, threshold_fields[0])
-    gt_2 = load_from_file(ground_truth, threshold_fields[1])
 
     if labels_limit > 0:
         gt_1[gt_1 > labels_limit] = labels_limit
         gt_2[gt_2 > labels_limit] = labels_limit
-
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
 
     thresholds = [t / 100 for t in range(0, 101, 5)]
 
@@ -2295,7 +2288,20 @@ def cli(sys_argv):
             probabilities_per_model, [gt1, gt2], **vars(args)
         )
     elif args.visualization == 'confidence_thresholding_2thresholds_3d':
-        confidence_thresholding_2thresholds_3d(**vars(args))
+        gt1 = load_from_file(
+            vars(args)['ground_truth'],
+            vars(args)['threshold_fields'][0]
+        )
+        gt2 = load_from_file(
+            vars(args)['ground_truth'],
+            vars(args)['threshold_fields'][1]
+        )
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        confidence_thresholding_2thresholds_3d(
+            probabilities_per_model, [gt1, gt2], **vars(args)
+        )
     elif args.visualization == 'binary_threshold_vs_metric':
         binary_threshold_vs_metric(**vars(args))
     elif args.visualization == 'roc_curves':
