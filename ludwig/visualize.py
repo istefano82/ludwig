@@ -788,26 +788,18 @@ def compare_classifiers_predictions_distribution(
 
 
 def confidence_thresholding(
-        probabilities,
-        ground_truth,
-        field,
+        probs_per_model,
+        gt,
         labels_limit,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 1:
-        logging.error('No probabilities provided')
-        return
-
-    gt = load_from_file(ground_truth, field)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
-
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
-
+    probs = probs_per_model
+    model_names_list = convert_to_list(model_names)
     thresholds = [t / 100 for t in range(0, 101, 5)]
 
     accuracies = []
@@ -854,7 +846,7 @@ def confidence_thresholding(
         thresholds,
         accuracies,
         dataset_kept,
-        model_names,
+        model_names_list,
         title='Confidence_Thresholding',
         filename=filename
     )
@@ -2265,7 +2257,13 @@ def cli(sys_argv):
             preds_per_model, gt, **vars(args)
         )
     elif args.visualization == 'confidence_thresholding':
-        confidence_thresholding(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        confidence_thresholding(
+            probabilities_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'confidence_thresholding_data_vs_acc':
         confidence_thresholding_data_vs_acc(**vars(args))
     elif args.visualization == 'confidence_thresholding_data_vs_acc_subset':

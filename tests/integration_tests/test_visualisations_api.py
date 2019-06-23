@@ -22,12 +22,10 @@ import numpy as np
 from ludwig.api import LudwigModel
 from ludwig.utils.data_utils import read_csv
 from ludwig import visualize
-from tests.integration_tests.utils import ENCODERS
 from tests.integration_tests.utils import categorical_feature
 from tests.integration_tests.utils import generate_data
 from tests.integration_tests.utils import sequence_feature
 from tests.integration_tests.utils import text_feature
-from unittest import mock
 from ludwig.data.preprocessing import _preprocess_csv_for_training, get_split
 # The following imports are pytest fixtures, required for running the tests
 from tests.fixtures.filenames import csv_filename
@@ -52,6 +50,66 @@ def run_api_experiment(input_features, output_features):
 
     model = LudwigModel(model_definition)
     return model
+
+class Experiment:
+    """Helper class to create model test data, setup and run experiment.
+
+    Contain the needed model experiment statistics as class attributes.
+    """
+
+    def __init__(self, csv_filename):
+        self.csv_file = csv_filename
+        self.model = None
+        self.input_features = [
+            text_feature(vocab_size=10, min_len=1, representation='sparse'),
+            categorical_feature(
+                vocab_size=10,
+                loss='sampled_softmax_cross_entropy'
+            )
+        ]
+        self.output_features = [
+            categorical_feature(vocab_size=2, reduce_input='sum')]
+        encoder = 'cnnrnn'
+        data_csv = generate_data(
+            self.input_features,
+            self.output_features,
+            self.csv_file
+        )
+        self.input_features[0]['encoder'] = encoder
+        self.run_api_experiment()
+        test_df, train_df, val_df = obtain_df_splits(data_csv)
+        self.train_stats = self.model.train(
+            data_train_df=train_df,
+            data_validation_df=val_df
+        )
+        self.test_stats = self.model.test(
+            data_df=test_df
+        )
+        self.field = self.output_features[0]['name']
+        # probabilities need to be list of lists containing each row data from the
+        # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
+        self.probability = self.test_stats[0].iloc[:, 2:].values
+        self.ground_truth_metadata = self.model.train_set_metadata
+        target_predictions = test_df[self.field]
+        self.ground_truth = np.asarray([
+            self.ground_truth_metadata[self.field]['str2idx'][test_row]
+            for test_row in target_predictions
+        ])
+        prediction_raw = self.test_stats[0].iloc[:, 0].tolist()
+        self.prediction = np.asarray([
+            self.ground_truth_metadata[self.field]['str2idx'][pred_row]
+            for pred_row in prediction_raw])
+
+    def run_api_experiment(self,):
+        """Helper method to avoid code repetition in running an experiment"""
+        model_definition = {
+            'input_features': self.input_features,
+            'output_features': self.output_features,
+            'combiner': {'type': 'concat', 'fc_size': 14},
+            'training': {'epochs': 2}
+        }
+        self.model = LudwigModel(model_definition)
+
 
 def obtain_df_splits(data_csv):
     """Split input data csv file in to train, validation and test dataframes.
@@ -529,3 +587,31 @@ def test_compare_classifiers_predictions_distribution_vis_api(csv_filename):
         assert 1 == len(figure_cnt)
     model.close()
     shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+
+def test_confidence_thresholding_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    # Single sequence input, single category output
+    experiment = Experiment(csv_filename)
+    probability = experiment.probability
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
+        visualize.confidence_thresholding(
+            [probability, probability],
+            experiment.ground_truth,
+            labels_limit=0,
+            model_name = ['Model1', 'Model2'],
+            output_directory=experiment.model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 1 == len(figure_cnt)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
+
+
