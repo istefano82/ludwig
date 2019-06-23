@@ -135,7 +135,6 @@ def test_learning_curves_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [sequence_feature(reduce_output='sum')]
     output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
     encoder = 'cnnrnn'
@@ -167,7 +166,6 @@ def test_compare_performance_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [sequence_feature(reduce_output='sum')]
     output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
     encoder = 'cnnrnn'
@@ -201,7 +199,6 @@ def test_compare_classifier_performance_from_prob_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [
         text_feature(vocab_size=10, min_len=1, representation='sparse'),
         categorical_feature(
@@ -258,7 +255,6 @@ def test_compare_classifier_performance_from_pred_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [
         text_feature(vocab_size=10, min_len=1, representation='sparse'),
         categorical_feature(
@@ -317,7 +313,6 @@ def test_compare_classifiers_performance_subset_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [
         text_feature(vocab_size=10, min_len=1, representation='sparse'),
         categorical_feature(
@@ -376,7 +371,6 @@ def test_compare_classifiers_performance_changing_k_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [
         text_feature(vocab_size=10, min_len=1, representation='sparse'),
         categorical_feature(
@@ -435,7 +429,6 @@ def test_compare_classifiers_multiclass_multimetric_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [sequence_feature(reduce_output='sum')]
     output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
     encoder = 'cnnrnn'
@@ -474,7 +467,6 @@ def test_compare_classifiers_predictions_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [
         text_feature(vocab_size=10, min_len=1, representation='sparse'),
         categorical_feature(
@@ -534,7 +526,6 @@ def test_compare_classifiers_predictions_distribution_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     input_features = [
         text_feature(vocab_size=10, min_len=1, representation='sparse'),
         categorical_feature(
@@ -594,7 +585,6 @@ def test_confidence_thresholding_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    # Single sequence input, single category output
     experiment = Experiment(csv_filename)
     probability = experiment.probability
     viz_outputs = ('pdf', 'png')
@@ -614,4 +604,28 @@ def test_confidence_thresholding_vis_api(csv_filename):
         assert 1 == len(figure_cnt)
     shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
+def test_confidence_thresholding_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    experiment = Experiment(csv_filename)
+    probability = experiment.probability
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
+        visualize.confidence_thresholding_data_vs_acc(
+            [probability, probability],
+            experiment.ground_truth,
+            labels_limit=0,
+            model_name = ['Model1', 'Model2'],
+            output_directory=experiment.model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 1 == len(figure_cnt)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
