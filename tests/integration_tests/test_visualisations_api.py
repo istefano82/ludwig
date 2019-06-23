@@ -902,5 +902,60 @@ def test_roc_curves_from_test_statistics_vis_api(csv_filename):
         )
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 1 == len(figure_cnt)
+    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+
+def test_calibration_1_vs_all_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    input_features = [
+        text_feature(vocab_size=50, min_len=1, representation='sparse'),
+        categorical_feature(
+            vocab_size=10,
+            loss='sampled_softmax_cross_entropy'
+        )
+    ]
+    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
+    encoder = 'cnnrnn'
+    data_csv = generate_data(input_features, output_features, csv_filename)
+    input_features[0]['encoder'] = encoder
+    model = run_api_experiment(input_features, output_features)
+
+    test_df, train_df, val_df = obtain_df_splits(data_csv)
+    model.train(
+        data_train_df = train_df,
+        data_validation_df = val_df
+    )
+    test_stats = model.test(
+        data_df=test_df
+    )
+
+    field = output_features[0]['name']
+    # probabilities need to be list of lists containing each row data from the
+    # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
+    probability = test_stats[0].iloc[:, 2:].values
+
+    ground_truth_metadata = model.train_set_metadata
+    target_predictions = test_df[field]
+    ground_truth = np.asarray([
+        ground_truth_metadata[field]['str2idx'][test_row]
+        for test_row in target_predictions
+    ])
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        visualize.calibration_1_vs_all(
+            [probability, probability],
+            ground_truth,
+            top_n_classes=[6],
+            labels_limit=0,
+            model_namess = ['Model1', 'Model2'],
+            output_directory=model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 5 == len(figure_cnt)
     model.close()
     shutil.rmtree(model.exp_dir_name, ignore_errors=True)
