@@ -1739,8 +1739,8 @@ def calibration_multiclass(
 
 
 def confusion_matrix(
-        test_statistics,
-        ground_truth_metadata,
+        test_stats_per_model,
+        metadata,
         field,
         top_n_classes,
         normalize,
@@ -1749,37 +1749,27 @@ def confusion_matrix(
         file_format='pdf',
         **kwargs
 ):
-    if len(test_statistics) < 1:
-        logging.error('No test_statistics provided')
-        return
-
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'confusion_matrix_{}_{}_{}.' + file_format
-        )
-
-    metadata = load_json(ground_truth_metadata)
-    test_statistics_per_model_name = [load_json(test_statistics_f)
-                                      for test_statistics_f in
-                                      test_statistics]
-
-    fields_set = set()
-    for ls in test_statistics_per_model_name:
-        for key in ls:
-            fields_set.add(key)
-    fields = [field] if field is not None and len(field) > 0 else fields_set
+    test_stats_per_model_list = test_stats_per_model
+    model_names_list = convert_to_list(model_names)
+    filename_template = 'confusion_matrix_{}_{}_{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
+    fields = validate_visualisation_prediction_field_from_test_stats(
+        field,
+        test_stats_per_model_list
+    )
 
     for i, test_statistics in enumerate(
-            test_statistics_per_model_name):
+            test_stats_per_model_list):
         for field in fields:
             if 'confusion_matrix' in test_statistics[field]:
                 confusion_matrix = np.array(
                     test_statistics[field]['confusion_matrix']
                 )
-                model_name_name = model_names[i] if (
-                        model_names is not None and i < len(model_names)
+                model_name_name = model_names_list[i] if (
+                        model_names_list is not None and i < len(model_names_list)
                 ) else ''
 
                 if field in metadata and 'idx2str' in metadata[field]:
@@ -1802,7 +1792,7 @@ def confusion_matrix(
                     filename = None
                     if output_directory:
                         os.makedirs(output_directory, exist_ok=True)
-                        filename = filename_template.format(
+                        filename = filename_template_path.format(
                             model_name_name,
                             field,
                             'top' + str(k)
@@ -1827,7 +1817,7 @@ def confusion_matrix(
 
                     filename = None
                     if output_directory:
-                        filename = filename_template.format(
+                        filename = filename_template_path.format(
                             'entropy_' + model_name_name,
                             field,
                             'top' + str(k)
@@ -2302,7 +2292,11 @@ def cli(sys_argv):
             probabilities_per_model, gt, **vars(args)
         )
     elif args.visualization == 'confusion_matrix':
-        confusion_matrix(**vars(args))
+        test_stats_per_model = load_data_for_viz(
+            'load_json', vars(args)['test_statistics']
+        )
+        metadata = load_json(vars(args)['ground_truth_metadata'])
+        confusion_matrix(test_stats_per_model, metadata, **vars(args))
     elif args.visualization == 'frequency_vs_f1':
         frequency_vs_f1(**vars(args))
     elif args.visualization == 'learning_curves':

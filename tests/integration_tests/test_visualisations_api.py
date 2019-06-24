@@ -984,3 +984,30 @@ def test_calibration_multiclass_vis_api(csv_filename):
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 2 == len(figure_cnt)
     shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
+
+def test_confusion_matrix_vis_api(csv_filename):
+    """Ensure pdf and png figures can be saved via visualisation API call.
+
+    :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
+    :return: None
+    """
+    experiment = Experiment(csv_filename)
+    test_stats = experiment.test_stats_full[1]
+    viz_outputs = ('pdf', 'png')
+    for viz_output in viz_outputs:
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
+        visualize.confusion_matrix(
+            [test_stats, test_stats],
+            experiment.ground_truth_metadata,
+            experiment.field,
+            top_n_classes=[0],
+            normalize=False,
+            model_names_list= ['Model1', 'Model2'],
+            output_directory=experiment.model.exp_dir_name,
+            file_format=viz_output
+        )
+        figure_cnt = glob.glob(vis_output_pattern_pdf)
+        assert 2 == len(figure_cnt)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
