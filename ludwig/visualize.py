@@ -1834,8 +1834,8 @@ def confusion_matrix(
 
 
 def frequency_vs_f1(
-        test_statistics,
-        ground_truth_metadata,
+        test_stats_per_model,
+        metadata,
         field,
         top_n_classes,
         model_names=None,
@@ -1843,35 +1843,25 @@ def frequency_vs_f1(
         file_format='pdf',
         **kwargs
 ):
-    if len(test_statistics) < 1:
-        logging.error('No test_statistics provided')
-        return
-
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'frequency_vs_f1_{}_{}.' + file_format
-        )
-
-    metadata = load_json(ground_truth_metadata)
-    test_statistics_per_model_name = [load_json(test_statistics_f)
-                                      for test_statistics_f in
-                                      test_statistics]
+    test_stats_per_model_list = test_stats_per_model
+    model_names_list = convert_to_list(model_names)
+    filename_template = 'frequency_vs_f1_{}_{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
+    fields = validate_visualisation_prediction_field_from_test_stats(
+        field,
+        test_stats_per_model_list
+    )
     k = top_n_classes[0]
 
-    fields_set = set()
-    for ls in test_statistics_per_model_name:
-        for key in ls:
-            fields_set.add(key)
-    fields = [field] if field is not None and len(field) > 0 else fields_set
-
     for i, test_statistics in enumerate(
-            test_statistics_per_model_name):
+            test_stats_per_model_list):
         for field in fields:
-            model_name_name = (model_names[i]
-                               if model_names is not None and i < len(
-                model_names)
+            model_name_name = (model_names_list[i]
+                               if model_names_list is not None and i < len(
+                model_names_list)
                                else '')
             per_class_stats = test_statistics[field]['per_class_stats']
             f1_scores = []
@@ -1906,7 +1896,7 @@ def frequency_vs_f1(
             filename = None
             if output_directory:
                 os.makedirs(output_directory, exist_ok=True)
-                filename = filename_template.format(model_name_name, field)
+                filename = filename_template_path.format(model_name_name, field)
 
             visualization_utils.double_axis_line_plot(
                 f1_reordered,
@@ -2298,7 +2288,11 @@ def cli(sys_argv):
         metadata = load_json(vars(args)['ground_truth_metadata'])
         confusion_matrix(test_stats_per_model, metadata, **vars(args))
     elif args.visualization == 'frequency_vs_f1':
-        frequency_vs_f1(**vars(args))
+        test_stats_per_model = load_data_for_viz(
+            'load_json', vars(args)['test_statistics']
+        )
+        metadata = load_json(vars(args)['ground_truth_metadata'])
+        frequency_vs_f1(test_stats_per_model, metadata, **vars(args))
     elif args.visualization == 'learning_curves':
         train_stats_per_model = load_data_for_viz(
             'load_json', vars(args)['training_statistics']
