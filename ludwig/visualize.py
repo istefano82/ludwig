@@ -1651,34 +1651,25 @@ def calibration_1_vs_all(
 
 
 def calibration_multiclass(
-        probabilities,
-        ground_truth,
-        field,
+        probs_per_model,
+        gt,
         labels_limit,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
-    if len(probabilities) < 1:
-        logging.error('No probabilities provided')
-        return
-
-    filename_template = None
-    if output_directory:
-        filename_template = os.path.join(
-            output_directory,
-            'calibration_multiclass{}.' + file_format
-        )
-
-    gt = load_from_file(ground_truth, field)
+    probs = probs_per_model
+    model_names_list = convert_to_list(model_names)
+    filename_template = 'calibration_multiclass{}.' + file_format
+    filename_template_path = generate_filename_template_path(
+        output_directory,
+        filename_template
+    )
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
 
     prob_classes = 0
-    probs = [load_from_file(probs_fn, dtype=float)
-             for probs_fn in probabilities]
-
     for i, prob in enumerate(probs):
         if labels_limit > 0 and prob.shape[1] > labels_limit + 1:
             prob_limit = prob[:, :labels_limit + 1]
@@ -1716,18 +1707,18 @@ def calibration_multiclass(
     filename = None
     if output_directory:
         os.makedirs(output_directory, exist_ok=True)
-        filename = filename_template.format('')
+        filename = filename_template_path.format('')
 
     visualization_utils.calibration_plot(
         fraction_positives,
         mean_predicted_vals,
-        model_names,
+        model_names_list,
         filename=filename
     )
 
     filename = None
     if output_directory:
-        filename = filename_template.format('_brier')
+        filename = filename_template_path.format('_brier')
 
     visualization_utils.compare_classifiers_plot(
         [brier_scores],
@@ -2303,7 +2294,13 @@ def cli(sys_argv):
             probabilities_per_model, gt, **vars(args)
         )
     elif args.visualization == 'calibration_multiclass':
-        calibration_multiclass(**vars(args))
+        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
+        probabilities_per_model = load_data_for_viz(
+            'load_from_file', vars(args)['probabilities'], dtype=float
+        )
+        calibration_multiclass(
+            probabilities_per_model, gt, **vars(args)
+        )
     elif args.visualization == 'confusion_matrix':
         confusion_matrix(**vars(args))
     elif args.visualization == 'frequency_vs_f1':
