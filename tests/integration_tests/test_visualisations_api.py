@@ -1003,12 +1003,13 @@ def test_confusion_matrix_vis_api(csv_filename):
             experiment.ground_truth_metadata,
             experiment.field,
             top_n_classes=[0],
+            normalize=False,
             model_names= ['Model1', 'Model2'],
             output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
         figure_cnt = glob.glob(vis_output_pattern_pdf)
-        assert 2 == len(figure_cnt)
+        assert 4 == len(figure_cnt)
     shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
 
@@ -1037,3 +1038,4 @@ def test_frequency_vs_f1_vis_api(csv_filename):
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 2 == len(figure_cnt)
     shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
+
