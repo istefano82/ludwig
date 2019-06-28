@@ -260,56 +260,25 @@ def test_compare_classifiers_performance_changing_k_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    input_features = [
-        text_feature(vocab_size=10, min_len=1, representation='sparse'),
-        categorical_feature(
-            vocab_size=10,
-            loss='sampled_softmax_cross_entropy'
-        )
-    ]
-    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
-    encoder = 'cnnrnn'
-
-    # Generate test data
-    data_csv = generate_data(input_features, output_features, csv_filename)
-    input_features[0]['encoder'] = encoder
-    model = run_api_experiment(input_features, output_features)
-    test_df, train_df, val_df = obtain_df_splits(data_csv)
-    model.train(
-        data_train_df=train_df,
-        data_validation_df=val_df
-    )
-    test_stats = model.test(
-        data_df=test_df
-    )
-
-    field = output_features[0]['name']
-    # probabilities need to be list of lists containing each row data from the
-    # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
-    probability = test_stats[0].iloc[:, 2:].values
-
-    ground_truth_metadata = model.train_set_metadata
-    target_predictions = test_df[field]
-    ground_truth = np.asarray([
-        ground_truth_metadata[field]['str2idx'][test_row]
-        for test_row in target_predictions
-    ])
+    experiment = Experiment(csv_filename)
+    probability = experiment.probability
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
-        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
         visualize.compare_classifiers_performance_changing_k(
             [probability, probability],
-            ground_truth,
+            experiment.ground_truth,
             top_k=3,
             labels_limit=0,
             model_namess = ['Model1', 'Model2'],
-            output_directory=model.exp_dir_name,
+            output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 1 == len(figure_cnt)
-    model.close()
-    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
 
 def test_compare_classifiers_multiclass_multimetric_vis_api(csv_filename):
@@ -318,37 +287,25 @@ def test_compare_classifiers_multiclass_multimetric_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    input_features = [sequence_feature(reduce_output='sum')]
-    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
-    encoder = 'cnnrnn'
-
-    # Generate test data
-    data_csv = generate_data(input_features, output_features, csv_filename)
-    input_features[0]['encoder'] = encoder
-    model = run_api_experiment(input_features, output_features)
-    data_df = read_csv(data_csv)
-    model.train(data_df=data_df)
-    test_stats = model.test(data_df=data_df)[1]
-
-    field = output_features[0]['name']
-    ground_truth_metadata = model.train_set_metadata
-
+    experiment = Experiment(csv_filename)
+    test_stats = experiment.test_stats_full[1]
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
-        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
         visualize.compare_classifiers_multiclass_multimetric(
             [test_stats, test_stats],
-            ground_truth_metadata,
-            field,
+            experiment.ground_truth_metadata,
+            experiment.field,
             top_n_classes=[6],
             model_namess = ['Model1', 'Model2'],
-            output_directory=model.exp_dir_name,
+            output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 4 == len(figure_cnt)
-    model.close()
-    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
 def test_compare_classifiers_predictions_vis_api(csv_filename):
     """Ensure pdf and png figures can be saved via visualisation API call.
@@ -356,58 +313,24 @@ def test_compare_classifiers_predictions_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    input_features = [
-        text_feature(vocab_size=10, min_len=1, representation='sparse'),
-        categorical_feature(
-            vocab_size=10,
-            loss='sampled_softmax_cross_entropy'
-        )
-    ]
-    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
-    encoder = 'cnnrnn'
-
-    # Generate test data
-    data_csv = generate_data(input_features, output_features, csv_filename)
-    input_features[0]['encoder'] = encoder
-    model = run_api_experiment(input_features, output_features)
-
-    test_df, train_df, val_df = obtain_df_splits(data_csv)
-    model.train(
-        data_train_df = train_df,
-        data_validation_df = val_df
-    )
-    test_stats = model.test(
-        data_df=test_df
-    )
-    field = output_features[0]['name']
-    ground_truth_metadata = model.train_set_metadata
-    target_predictions = test_df[field]
-    ground_truth = np.asarray([
-        ground_truth_metadata[field]['str2idx'][test_row]
-        for test_row in target_predictions
-    ])
-    # predictions need  to be list of lists containing each row data from the
-    # prediction column
-    prediction_raw = test_stats[0].iloc[:, 0].tolist()
-    prediction = np.asarray([
-        ground_truth_metadata[field]['str2idx'][pred_row]
-        for pred_row in prediction_raw
-    ])
+    experiment = Experiment(csv_filename)
+    prediction = experiment.prediction
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
-        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
         visualize.compare_classifiers_predictions(
             [prediction, prediction],
-            ground_truth,
+            experiment.ground_truth,
             labels_limit=0,
             model_names = ['Model1', 'Model2'],
-            output_directory=model.exp_dir_name,
+            output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 1 == len(figure_cnt)
-    model.close()
-    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
 def test_compare_classifiers_predictions_distribution_vis_api(csv_filename):
     """Ensure pdf and png figures can be saved via visualisation API call.
@@ -415,58 +338,24 @@ def test_compare_classifiers_predictions_distribution_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    input_features = [
-        text_feature(vocab_size=10, min_len=1, representation='sparse'),
-        categorical_feature(
-            vocab_size=10,
-            loss='sampled_softmax_cross_entropy'
-        )
-    ]
-    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
-    encoder = 'cnnrnn'
-
-    # Generate test data
-    data_csv = generate_data(input_features, output_features, csv_filename)
-    input_features[0]['encoder'] = encoder
-    model = run_api_experiment(input_features, output_features)
-
-    test_df, train_df, val_df = obtain_df_splits(data_csv)
-    model.train(
-        data_train_df = train_df,
-        data_validation_df = val_df
-    )
-    test_stats = model.test(
-        data_df=test_df
-    )
-    field = output_features[0]['name']
-    ground_truth_metadata = model.train_set_metadata
-    target_predictions = test_df[field]
-    ground_truth = np.asarray([
-        ground_truth_metadata[field]['str2idx'][test_row]
-        for test_row in target_predictions
-    ])
-    # predictions need  to be list of lists containing each row data from the
-    # prediction column
-    prediction_raw = test_stats[0].iloc[:, 0].tolist()
-    prediction = np.asarray([
-        ground_truth_metadata[field]['str2idx'][pred_row]
-        for pred_row in prediction_raw
-    ])
+    experiment = Experiment(csv_filename)
+    prediction = experiment.prediction
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
-        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
         visualize.compare_classifiers_predictions_distribution(
             [prediction, prediction],
-            ground_truth,
+            experiment.ground_truth,
             labels_limit=0,
             model_names = ['Model1', 'Model2'],
-            output_directory=model.exp_dir_name,
+            output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 1 == len(figure_cnt)
-    model.close()
-    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
 def test_confidence_thresholding_vis_api(csv_filename):
     """Ensure pdf and png figures can be saved via visualisation API call.
@@ -799,55 +688,25 @@ def test_calibration_1_vs_all_vis_api(csv_filename):
     :param csv_filename: csv fixture from tests.fixtures.filenames.csv_filename
     :return: None
     """
-    input_features = [
-        text_feature(vocab_size=50, min_len=1, representation='sparse'),
-        categorical_feature(
-            vocab_size=10,
-            loss='sampled_softmax_cross_entropy'
-        )
-    ]
-    output_features = [categorical_feature(vocab_size=2, reduce_input='sum')]
-    encoder = 'cnnrnn'
-    data_csv = generate_data(input_features, output_features, csv_filename)
-    input_features[0]['encoder'] = encoder
-    model = run_api_experiment(input_features, output_features)
-
-    test_df, train_df, val_df = obtain_df_splits(data_csv)
-    model.train(
-        data_train_df = train_df,
-        data_validation_df = val_df
-    )
-    test_stats = model.test(
-        data_df=test_df
-    )
-
-    field = output_features[0]['name']
-    # probabilities need to be list of lists containing each row data from the
-    # probability columns ref: https://uber.github.io/ludwig/api/#test - Return
-    probability = test_stats[0].iloc[:, 2:].values
-
-    ground_truth_metadata = model.train_set_metadata
-    target_predictions = test_df[field]
-    ground_truth = np.asarray([
-        ground_truth_metadata[field]['str2idx'][test_row]
-        for test_row in target_predictions
-    ])
+    experiment = Experiment(csv_filename)
+    probability = experiment.probability
     viz_outputs = ('pdf', 'png')
     for viz_output in viz_outputs:
-        vis_output_pattern_pdf = model.exp_dir_name + '/*.{}'.format(viz_output)
+        vis_output_pattern_pdf = experiment.model.exp_dir_name + '/*.{}'.format(
+            viz_output
+        )
         visualize.calibration_1_vs_all(
             [probability, probability],
-            ground_truth,
+            experiment.ground_truth,
             top_n_classes=[6],
             labels_limit=0,
             model_namess = ['Model1', 'Model2'],
-            output_directory=model.exp_dir_name,
+            output_directory=experiment.model.exp_dir_name,
             file_format=viz_output
         )
         figure_cnt = glob.glob(vis_output_pattern_pdf)
         assert 5 == len(figure_cnt)
-    model.close()
-    shutil.rmtree(model.exp_dir_name, ignore_errors=True)
+    shutil.rmtree(experiment.model.exp_dir_name, ignore_errors=True)
 
 def test_calibration_multiclass_vis_api(csv_filename):
     """Ensure pdf and png figures can be saved via visualisation API call.
