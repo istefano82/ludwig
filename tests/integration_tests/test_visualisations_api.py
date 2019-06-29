@@ -75,7 +75,7 @@ class Experiment:
             self.csv_file
         )
         self.input_features[0]['encoder'] = encoder
-        self.run_api_experiment()
+        self.setup_model()
         test_df, train_df, val_df = obtain_df_splits(data_csv)
         self.train_stats = self.model.train(
             data_train_df=train_df,
@@ -100,8 +100,8 @@ class Experiment:
             self.ground_truth_metadata[self.field]['str2idx'][pred_row]
             for pred_row in self.prediction_raw])
 
-    def run_api_experiment(self, ):
-        """Helper method to avoid code repetition in running an experiment"""
+    def setup_model(self):
+        """Configure and setup test model"""
         model_definition = {
             'input_features': self.input_features,
             'output_features': self.output_features,
