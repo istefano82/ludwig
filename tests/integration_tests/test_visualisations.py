@@ -498,7 +498,7 @@ def test_visualisation_compare_classifiers_changing_k_output_pdf(csv_filename):
         result = subprocess.run(command)
         figure_cnt = glob.glob(viz_pattern)
 
-        assert 0 == result.returncode
+        assert 0 == result.returncodeKK
         assert 1 == len(figure_cnt)
 
     shutil.rmtree(exp_dir_name, ignore_errors=True)
