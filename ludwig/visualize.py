@@ -460,6 +460,19 @@ def calibration_multiclass_cli(**kwargs):
     calibration_multiclass(probabilities_per_model, gt, **kwargs)
 
 
+def confusion_matrix_cli(**kwargs):
+    """Load model data from files to be shown by confusion_matrix.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    test_stats_per_model = load_data_for_viz(
+        'load_json', kwargs['test_statistics']
+    )
+    metadata = load_json(kwargs['ground_truth_metadata'])
+    confusion_matrix(test_stats_per_model, metadata, **kwargs)
+
+
 def frequency_vs_f1_cli(**kwargs):
     """Load model data from files to be shown by frequency_vs_f1.
 
@@ -2453,6 +2466,24 @@ def confusion_matrix(
         file_format='pdf',
         **kwargs
 ):
+    """Show confision matrix in the models predictions for each field.
+
+    For each model (in the aligned lists of test_statistics and model_names)
+    it  produces a heatmap of the confusion matrix in the predictions for
+    each  field that has a confusion matrix in test_statistics. The value of
+    top_n_classes limits the heatmap to the n most frequent classes.
+    :param test_stats_per_model: List containing train statistics per model
+    :param metadata: Model's input metadata
+    :param field: Prediction field containing ground truth.
+    :param top_n_classes: List containing the number of classes to plot
+    :param normalize: Flag to normalize rows in confusion matrix
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    :return:
+    """
     test_stats_per_model_list = test_stats_per_model
     model_names_list = convert_to_list(model_names)
     filename_template = 'confusion_matrix_{}_{}_{}.' + file_format
@@ -2884,11 +2915,7 @@ def cli(sys_argv):
     elif args.visualization == 'calibration_multiclass':
         calibration_multiclass_cli(**vars(args))
     elif args.visualization == 'confusion_matrix':
-        test_stats_per_model = load_data_for_viz(
-            'load_json', vars(args)['test_statistics']
-        )
-        metadata = load_json(vars(args)['ground_truth_metadata'])
-        confusion_matrix(test_stats_per_model, metadata, **vars(args))
+        confusion_matrix_cli(**vars(args))
     elif args.visualization == 'frequency_vs_f1':
         frequency_vs_f1_cli(**vars(args))
     elif args.visualization == 'learning_curves':
