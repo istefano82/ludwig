@@ -254,6 +254,13 @@ def compare_classifiers_multiclass_multimetric_cli(**kwargs):
     )
 
 
+def compare_classifiers_predictions_cli(**kwargs):
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    preds_per_model = load_data_for_viz(
+        'load_from_file', kwargs['predictions'], dtype=str
+    )
+    compare_classifiers_predictions(preds_per_model, gt, **kwargs)
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -482,7 +489,7 @@ def compare_classifiers_performance_from_pred(
                target prediction field based on the model metadata
     :param metadata: Model's input metadata
     :param field: field containing ground truth
-    :param labels_limit: aximum numbers of labels.
+    :param labels_limit: Maximum numbers of labels.
              If labels in dataset are higher than this number, "rare" label
     :param model_names: List of the names of the models to use as labels.
     :param output_directory: Directory where to save plots.
@@ -884,6 +891,19 @@ def compare_classifiers_predictions(
         file_format='pdf',
         **kwargs
 ):
+    """Show two models comparision of their field predictions.
+
+    :param preds_per_model: List containing the model predictions
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    :param labels_limit: Maximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     model_names_list = convert_to_list(model_names)
     name_c1 = (
         model_names_list[0] if model_names is not None and len(model_names) > 0
@@ -2348,13 +2368,7 @@ def cli(sys_argv):
     elif args.visualization == 'compare_classifiers_multiclass_multimetric':
         compare_classifiers_multiclass_multimetric_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_predictions':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        preds_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['predictions'], dtype=str
-        )
-        compare_classifiers_predictions(
-            preds_per_model, gt, **vars(args)
-        )
+        compare_classifiers_predictions_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_predictions_distribution':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         preds_per_model = load_data_for_viz(
