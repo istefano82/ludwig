@@ -282,6 +282,14 @@ def compare_classifiers_predictions_distribution_cli(**kwargs):
         preds_per_model, gt, **kwargs
     )
 
+def confidence_thresholding_cli(**kwargs):
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    confidence_thresholding(
+        probabilities_per_model, gt, **kwargs
+    )
 
 def learning_curves(
         train_stats_per_model,
@@ -1098,6 +1106,22 @@ def confidence_thresholding(
         file_format='pdf',
         **kwargs
 ):
+    """Show models accuracy and data coverage while increasing treshold
+
+    For each model it produces a pair of lines indicating the accuracy of
+    the model and the data coverage while increasing a threshold (x axis) on
+    the probabilities of predictions for the specified field.
+    :param probs_per_model: List of model probabilities
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    :param labels_limit: Maximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
     probs = probs_per_model
@@ -2409,13 +2433,7 @@ def cli(sys_argv):
     elif args.visualization == 'compare_classifiers_predictions_distribution':
         compare_classifiers_predictions_distribution_cli(**vars(args))
     elif args.visualization == 'confidence_thresholding':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        confidence_thresholding(
-            probabilities_per_model, gt, **vars(args)
-        )
+        confidence_thresholding_cli(**vars(args))
     elif args.visualization == 'confidence_thresholding_data_vs_acc':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(
