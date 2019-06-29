@@ -193,6 +193,22 @@ def compare_classifiers_performance_from_prob_cli(**kwargs):
     )
 
 
+def compare_classifiers_performance_from_pred_cli(**kwargs):
+    """Load model data from files to be shown by compare_classifiers_from_pred.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    metadata = load_json(kwargs['ground_truth_metadata'])
+    preds_per_model = load_data_for_viz(
+        'load_from_file', kwargs['predictions'], dtype=str
+    )
+    compare_classifiers_performance_from_pred(
+        preds_per_model, gt, metadata, **kwargs
+    )
+
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -335,7 +351,7 @@ def compare_classifiers_performance_from_prob(
     For each model it produces bars in a bar plot, one for each overall metric
     computed on the fly from the probabilities of predictions for the specified
     field.
-    :param probs_per_model:
+    :param probs_per_model: List of model probabilities
     :param gt: NumPy Array containing computed model ground truth data for
                target prediction field based on the model metadata
     :param top_n_classes: List containing the number of classes to plot
@@ -411,6 +427,24 @@ def compare_classifiers_performance_from_pred(
         file_format='pdf',
         **kwargs
 ):
+    """Produces model comparision barplot visualisation from predictions.
+
+    For each model it produces bars in a bar plot, one for each overall metric
+    computed on the fly from the predictions for the specified field.
+    :param preds_per_model: List containing the model predictions
+           for the specified field
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    :param metadata: Model's input metadata
+    :param field: field containing ground truth
+    :param labels_limit: aximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
 
@@ -2208,14 +2242,7 @@ def cli(sys_argv):
     elif args.visualization == 'compare_classifiers_performance_from_prob':
         compare_classifiers_performance_from_prob_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_from_pred':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        metadata = load_json(vars(args)['ground_truth_metadata'])
-        preds_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['predictions'], dtype=str
-        )
-        compare_classifiers_performance_from_pred(
-            preds_per_model, gt, metadata, **vars(args)
-        )
+        compare_classifiers_performance_from_pred_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_subset':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(
