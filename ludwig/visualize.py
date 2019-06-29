@@ -367,6 +367,30 @@ def confidence_thresholding_2thresholds_2d_cli(**kwargs):
         probabilities_per_model, [gt1, gt2], **kwargs
     )
 
+
+def confidence_thresholding_2thresholds_3d_cli(**kwargs):
+    """Load model data from files to be shown by
+    confidence_thresholding_2thresholds_2d_cli
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt1 = load_from_file(
+        kwargs['ground_truth'],
+        kwargs['threshold_fields'][0]
+    )
+    gt2 = load_from_file(
+        kwargs['ground_truth'],
+        kwargs['threshold_fields'][1]
+    )
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    confidence_thresholding_2thresholds_3d(
+        probabilities_per_model, [gt1, gt2], **kwargs
+    )
+
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -1598,7 +1622,7 @@ def confidence_thresholding_2thresholds_2d(
         file_format='pdf',
         **kwargs
 ):
-    """Show confidence trethresholdr data vs accuracy for two field thresholds
+    """Show confidence trethreshold data vs accuracy for two field thresholds
 
     The first plot shows several semi transparent lines. They summarize the
     3d surfaces displayed by confidence_thresholding_2thresholds_3d that have
@@ -1612,7 +1636,7 @@ def confidence_thresholding_2thresholds_2d(
     :param threshold_fields: List of fields for 2d threshold
     :param labels_limit: Maximum numbers of labels.
              If labels in dataset are higher than this number, "rare" label
-    :param model_names: List of the names of the models to use as labels.
+    :param model_names: Name of the model to use as label.
     :param output_directory: Directory where to save plots.
              If not specified, plots will be displayed in a window
     :param file_format: File format of output plots - pdf or png
@@ -1786,6 +1810,23 @@ def confidence_thresholding_2thresholds_3d(
         file_format='pdf',
         **kwargs
 ):
+    """Show 3d confidence trethreshold data vs accuracy for two field thresholds
+
+    The plot shows the 3d surfaces displayed by
+    confidence_thresholding_2thresholds_3d that have thresholds on the
+    confidence of the predictions of the two threshold_fields as x and y axes
+    and either the data coverage percentage or the accuracy as z axis.
+    :param probs_per_model: List of model probabilities
+    :param gt: List of NumPy Arrays containing computed model ground truth
+               data for target prediction fields based on the model metadata
+    :param threshold_fields: List of fields for 2d threshold
+    :param labels_limit: Maximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     try:
         validate_conf_treshholds_and_probabilities_2d_3d(
             probs_per_model,
@@ -2630,20 +2671,7 @@ def cli(sys_argv):
     elif args.visualization == 'confidence_thresholding_2thresholds_2d':
         confidence_thresholding_2thresholds_2d_cli(**vars(args))
     elif args.visualization == 'confidence_thresholding_2thresholds_3d':
-        gt1 = load_from_file(
-            vars(args)['ground_truth'],
-            vars(args)['threshold_fields'][0]
-        )
-        gt2 = load_from_file(
-            vars(args)['ground_truth'],
-            vars(args)['threshold_fields'][1]
-        )
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        confidence_thresholding_2thresholds_3d(
-            probabilities_per_model, [gt1, gt2], **vars(args)
-        )
+        confidence_thresholding_2thresholds_3d_cli(**vars(args))
     elif args.visualization == 'binary_threshold_vs_metric':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(
