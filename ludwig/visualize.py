@@ -209,6 +209,20 @@ def compare_classifiers_performance_from_pred_cli(**kwargs):
     )
 
 
+def compare_classifiers_performance_subset_cli(**kwargs):
+    """Load model data from files to be shown by compare_classifiers_subset.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    compare_classifiers_performance_subset(
+        probabilities_per_model, gt, **kwargs
+    )
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -494,7 +508,27 @@ def compare_classifiers_performance_subset(
         file_format='pdf',
         **kwargs
 ):
-    k = top_n_classes[0]
+    """Produces model comparision barplot visualisation from train subset.
+
+    For each model  it produces bars in a bar plot, one for each overall metric
+     computed on the fly from the probabilities predictions for the
+     specified field, considering only a subset of the full training set.
+     The way the subset is obtained is using the top_n_classes and
+     subset parameters.
+    :param probs_per_model: List of model probabilities
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    :param top_n_classes: List containing the number of classes to plot
+    :param labels_limit: Maximum numbers of labels.
+    :param subset: Type of the subset filtering
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
+    top_n_classes_list = convert_to_list(top_n_classes)
+    k = top_n_classes_list[0]
     model_names_list = convert_to_list(model_names)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
@@ -2244,13 +2278,7 @@ def cli(sys_argv):
     elif args.visualization == 'compare_classifiers_performance_from_pred':
         compare_classifiers_performance_from_pred_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_subset':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        compare_classifiers_performance_subset(
-            probabilities_per_model, gt, **vars(args)
-        )
+        compare_classifiers_performance_subset_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_changing_k':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(
