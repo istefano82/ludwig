@@ -70,7 +70,7 @@ def load_data_for_viz(load_type, model_file_statistics, **kwargs):
     supported_load_types = dict(load_json=load_json,
                                 load_from_file=partial(load_from_file,
                                                        dtype=kwargs.get('dtype',
-                                                                        None)))
+                                                                        int)))
     loader = supported_load_types[load_type]
     try:
         stats_per_model = [loader(stats_f)
@@ -155,7 +155,7 @@ def generate_filename_template_path(output_dir, filename_template):
 
 
 def compare_performance_cli(**kwargs):
-    """Load model data from files to be visualised by compare_performance.
+    """Load model data from files to be shown by compare_performance.
 
     :param kwargs: model configuration arguments
     :return None:
@@ -167,7 +167,7 @@ def compare_performance_cli(**kwargs):
 
 
 def learning_curves_cli(**kwargs):
-    """Load model data from files to be visualised by learning_curves.
+    """Load model data from files to be shown by learning_curves.
 
     :param kwargs: model configuration arguments
     :return None:
@@ -178,6 +178,21 @@ def learning_curves_cli(**kwargs):
     learning_curves(train_stats_per_model, **kwargs)
 
 
+def compare_classifiers_performance_from_prob_cli(**kwargs):
+    """Load model data from files to be shown by compare_classifiers_from_prob.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    compare_classifiers_performance_from_prob(
+        probabilities_per_model, gt, **kwargs
+    )
+
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -186,17 +201,17 @@ def learning_curves(
         file_format='pdf',
         **kwargs
 ):
-    """Show how model messures change over training and validation data epochs.
+    """Show how model measures change over training and validation data epochs.
     
      For each model and for each output feature and measure of the model,
      it produces a line plot showing how that measure changed over the course
      of the epochs of training on the training and validation sets.
     :param train_stats_per_model: List containing train statistics per model
-    :param field: List containing models prediction field(s).
-    :param model_names: List of model names
-    :param output_directory: Directory where the plots will be saved
-    :param file_format:file format for output plots-
-           can be pdf(default) or png
+    :param field: Prediction field containing ground truth.
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
     :return None:
     """
     filename_template = 'learning_curves_{}_{}.' + file_format
@@ -230,6 +245,7 @@ def learning_curves(
                     filename=filename
                 )
 
+
 def compare_performance(
         test_stats_per_model,
         field, model_names=None,
@@ -237,18 +253,18 @@ def compare_performance(
         file_format='pdf',
         **kwargs
 ):
-    """Produces model comparision barplot visualisations for each overall metric
+    """Produces model comparision barplot visualisation for each overall metric
 
 
     For each model (in the aligned lists of test_statistics and model_names)
     it produces bars in a bar plot, one for each overall metric available
     in the test_statistics file for the specified field.
     :param test_stats_per_model: List containing train statistics per model
-    :param field: List containing models prediction field(s).
-    :param model_names: List of model names
-    :param output_directory: Directory where the plots will be saved
-    :param file_format: file format for output plots-
-           can be pdf(default) or png
+    :param field: rediction field containing ground truth.
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
     :return None:
     """
     filename_template = 'compare_performance_{}.' + file_format
@@ -314,7 +330,25 @@ def compare_classifiers_performance_from_prob(
         file_format='pdf',
         **kwargs
 ):
-    k = top_n_classes[0]
+    """Produces model comparision barplot visualisation from probabilities.
+
+    For each model it produces bars in a bar plot, one for each overall metric
+    computed on the fly from the probabilities of predictions for the specified
+    field.
+    :param probs_per_model:
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    :param top_n_classes: List containing the number of classes to plot
+    :param labels_limit: Maximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
+    top_n_classes_list = convert_to_list(top_n_classes)
+    k = top_n_classes_list[0]
     model_names_list = convert_to_list(model_names)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
@@ -2172,13 +2206,7 @@ def cli(sys_argv):
     if args.visualization == 'compare_performance':
         compare_performance_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_from_prob':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        compare_classifiers_performance_from_prob(
-            probabilities_per_model, gt, **vars(args)
-        )
+        compare_classifiers_performance_from_prob_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_from_pred':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         metadata = load_json(vars(args)['ground_truth_metadata'])
