@@ -43,7 +43,7 @@ def validate_conf_treshholds_and_probabilities_2d_3d(
     """Ensure probabilities and treshhold fields arrays have two members each.
 
     :param probabilities: List of probabilities per model
-    :param treshhold_fields: List of treshhold fields per model
+    :param threshhold_fields: List of threshhold fields per model
     :raise: RuntimeError
     """
     validation_mapping = {
@@ -342,6 +342,29 @@ def confidence_thresholding_data_vs_acc_subset_per_class_cli(**kwargs):
     )
     confidence_thresholding_data_vs_acc_subset_per_class(
         probabilities_per_model, gt, metadata, **kwargs
+    )
+
+
+def confidence_thresholding_2thresholds_2d_cli(**kwargs):
+    """Load model data from files to be shown by
+    confidence_thresholding_2thresholds_2d_cli
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt1 = load_from_file(
+        kwargs['ground_truth'],
+        kwargs['threshold_fields'][0]
+    )
+    gt2 = load_from_file(
+        kwargs['ground_truth'],
+        kwargs['threshold_fields'][1]
+    )
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    confidence_thresholding_2thresholds_2d(
+        probabilities_per_model, [gt1, gt2], **kwargs
     )
 
 def learning_curves(
@@ -1575,6 +1598,26 @@ def confidence_thresholding_2thresholds_2d(
         file_format='pdf',
         **kwargs
 ):
+    """Show confidence trethresholdr data vs accuracy for two field thresholds
+
+    The first plot shows several semi transparent lines. They summarize the
+    3d surfaces displayed by confidence_thresholding_2thresholds_3d that have
+    thresholds on the confidence of the predictions of the two
+    threshold_fields  as x and y axes and either the data coverage percentage or
+    the accuracy as z axis. Each line represents a slice of the data
+    coverage  surface projected onto the accuracy surface.
+    :param probs_per_model: List of model probabilities
+    :param gt: List of NumPy Arrays containing computed model ground truth
+               data for target prediction fields based on the model metadata
+    :param threshold_fields: List of fields for 2d threshold
+    :param labels_limit: Maximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     try:
         validate_conf_treshholds_and_probabilities_2d_3d(
             probs_per_model,
@@ -2585,20 +2628,7 @@ def cli(sys_argv):
           'confidence_thresholding_data_vs_acc_subset_per_class'):
         confidence_thresholding_data_vs_acc_subset_per_class_cli(**vars(args))
     elif args.visualization == 'confidence_thresholding_2thresholds_2d':
-        gt1 = load_from_file(
-            vars(args)['ground_truth'],
-            vars(args)['threshold_fields'][0]
-        )
-        gt2 = load_from_file(
-            vars(args)['ground_truth'],
-            vars(args)['threshold_fields'][1]
-        )
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        confidence_thresholding_2thresholds_2d(
-            probabilities_per_model, [gt1, gt2], **vars(args)
-        )
+        confidence_thresholding_2thresholds_2d_cli(**vars(args))
     elif args.visualization == 'confidence_thresholding_2thresholds_3d':
         gt1 = load_from_file(
             vars(args)['ground_truth'],
