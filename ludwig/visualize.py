@@ -223,6 +223,7 @@ def compare_classifiers_performance_subset_cli(**kwargs):
         probabilities_per_model, gt, **kwargs
     )
 
+
 def compare_classifiers_performance_changing_k_cli(**kwargs):
     """Load model data from files to be shown by compare_classifiers_changing_k.
 
@@ -235,6 +236,21 @@ def compare_classifiers_performance_changing_k_cli(**kwargs):
     )
     compare_classifiers_performance_changing_k(
         probabilities_per_model, gt, **kwargs
+    )
+
+
+def compare_classifiers_multiclass_multimetric_cli(**kwargs):
+    """Load model data from files to be shown by compare_classifiers_multiclass
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    test_stats_per_model = load_data_for_viz(
+        'load_json', kwargs['test_statistics']
+    )
+    metadata = load_json(kwargs['ground_truth_metadata'])
+    compare_classifiers_multiclass_multimetric(
+        test_stats_per_model, metadata=metadata, **kwargs
     )
 
 
@@ -305,7 +321,7 @@ def compare_performance(
     it produces bars in a bar plot, one for each overall metric available
     in the test_statistics file for the specified field.
     :param test_stats_per_model: List containing train statistics per model
-    :param field: rediction field containing ground truth.
+    :param field: Prediction field containing ground truth.
     :param model_names: List of the names of the models to use as labels.
     :param output_directory: Directory where to save plots.
              If not specified, plots will be displayed in a window
@@ -701,6 +717,21 @@ def compare_classifiers_multiclass_multimetric(
         file_format='pdf',
         **kwargs
 ):
+    """Show the precision, recall and F1 of the model for the specified field.
+
+    For each model it produces four plots that show the precision,
+    recall and F1 of the model on several classes for the specified field.
+    :param test_stats_per_model: List containing train statistics per model
+    :param metadata: Model's input metadata
+    :param field: Prediction field containing ground truth.
+    :param top_n_classes: List containing the number of classes to plot
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    :return:
+    """
     filename_template = 'compare_classifiers_multiclass_multimetric_{}_{}_{}.' \
                         + file_format
     filename_template_path = generate_filename_template_path(
@@ -2315,14 +2346,7 @@ def cli(sys_argv):
     elif args.visualization == 'compare_classifiers_performance_changing_k':
         compare_classifiers_performance_changing_k_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_multiclass_multimetric':
-        test_stats_per_model = load_data_for_viz(
-            'load_json', vars(args)['test_statistics']
-        )
-        metadata = load_json(vars(args)['ground_truth_metadata'])
-        compare_classifiers_multiclass_multimetric(
-            test_stats_per_model=test_stats_per_model, metadata=metadata,
-            **vars(args)
-        )
+        compare_classifiers_multiclass_multimetric_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_predictions':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         preds_per_model = load_data_for_viz(
