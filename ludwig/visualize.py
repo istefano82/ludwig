@@ -223,6 +223,21 @@ def compare_classifiers_performance_subset_cli(**kwargs):
         probabilities_per_model, gt, **kwargs
     )
 
+def compare_classifiers_performance_changing_k_cli(**kwargs):
+    """Load model data from files to be shown by compare_classifiers_changing_k.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    compare_classifiers_performance_changing_k(
+        probabilities_per_model, gt, **kwargs
+    )
+
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -619,6 +634,24 @@ def compare_classifiers_performance_changing_k(
         file_format='pdf',
         **kwargs
 ):
+    """Produce lineplot that show Hits@K measure while k goes from 1 to top_k.
+
+
+    For each model it produces a line plot that shows the Hits@K measure
+    (that counts a prediction as correct if the model produces it among the
+    first k) while changing k from 1 to top_k for the specified field.
+    :param probs_per_model: List of model probabilities
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    param top_k: Number of elements in the ranklist to consider
+    :param labels_limit: Maximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     k = top_k
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
@@ -2280,13 +2313,7 @@ def cli(sys_argv):
     elif args.visualization == 'compare_classifiers_performance_subset':
         compare_classifiers_performance_subset_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_changing_k':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        compare_classifiers_performance_changing_k(
-            probabilities_per_model, gt, **vars(args)
-        )
+        compare_classifiers_performance_changing_k_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_multiclass_multimetric':
         test_stats_per_model = load_data_for_viz(
             'load_json', vars(args)['test_statistics']
