@@ -255,11 +255,33 @@ def compare_classifiers_multiclass_multimetric_cli(**kwargs):
 
 
 def compare_classifiers_predictions_cli(**kwargs):
+    """Load model data from files to be shown by compare_classifiers_predictions
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
     gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
     preds_per_model = load_data_for_viz(
         'load_from_file', kwargs['predictions'], dtype=str
     )
     compare_classifiers_predictions(preds_per_model, gt, **kwargs)
+
+
+def compare_classifiers_predictions_distribution_cli(**kwargs):
+    """Load model data from files to be shown by
+    compare_predictions_distribution
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    preds_per_model = load_data_for_viz(
+        'load_from_file', kwargs['predictions'], dtype=str
+    )
+    compare_classifiers_predictions_distribution(
+        preds_per_model, gt, **kwargs
+    )
+
 
 def learning_curves(
         train_stats_per_model,
@@ -1021,6 +1043,21 @@ def compare_classifiers_predictions_distribution(
         file_format='pdf',
         **kwargs
 ):
+    """Show comparision of models predictions distribution for 10 field classes
+
+    This visualization produces a radar plot comparing the distributions of
+    predictions of the models for the first 10 classes of the specified field.
+    :param preds_per_model: List containing the model predictions
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    :param labels_limit: Maximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     model_names_list = convert_to_list(model_names)
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
@@ -2370,13 +2407,7 @@ def cli(sys_argv):
     elif args.visualization == 'compare_classifiers_predictions':
         compare_classifiers_predictions_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_predictions_distribution':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        preds_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['predictions'], dtype=str
-        )
-        compare_classifiers_predictions_distribution(
-            preds_per_model, gt, **vars(args)
-        )
+        compare_classifiers_predictions_distribution_cli(**vars(args))
     elif args.visualization == 'confidence_thresholding':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(

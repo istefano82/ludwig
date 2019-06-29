@@ -668,14 +668,11 @@ def test_visualisation_cmp_classifiers_predictions_distribution_output_saved(
     prediction = exp_dir_name + '/{}_predictions.npy'.format(field_name)
     experiment_source_data_name = csv_filename.split('.')[0]
     ground_truth = experiment_source_data_name + '.hdf5'
-    ground_truth_metadata = experiment_source_data_name + '.json'
     test_cmd_pdf = ['python',
                     '-m',
                     'ludwig.visualize',
                     '--visualization',
                     'compare_classifiers_predictions_distribution',
-                    '--ground_truth_metadata',
-                    ground_truth_metadata,
                     '--ground_truth',
                     ground_truth,
                     '--field',
@@ -693,11 +690,7 @@ def test_visualisation_cmp_classifiers_predictions_distribution_output_saved(
     vis_patterns = [vis_output_pattern_pdf, vis_output_pattern_png]
 
     for command, viz_pattern in zip(commands, vis_patterns):
-        result = subprocess.run(
-            command,
-            # stdout=subprocess.PIPE,
-            # stderr=subprocess.PIPE
-        )
+        result = subprocess.run(command)
         figure_cnt = glob.glob(viz_pattern)
 
         assert 0 == result.returncode
