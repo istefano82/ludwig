@@ -166,6 +166,18 @@ def compare_performance_cli(**kwargs):
     compare_performance(test_stats_per_model, **kwargs)
 
 
+def learning_curves_cli(**kwargs):
+    """Load model data from files to be visualised by learning_curves.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    train_stats_per_model = load_data_for_viz(
+        'load_json', kwargs['training_statistics']
+    )
+    learning_curves(train_stats_per_model, **kwargs)
+
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -174,6 +186,19 @@ def learning_curves(
         file_format='pdf',
         **kwargs
 ):
+    """Show how model messures change over training and validation data epochs.
+    
+     For each model and for each output feature and measure of the model,
+     it produces a line plot showing how that measure changed over the course
+     of the epochs of training on the training and validation sets.
+    :param train_stats_per_model: List containing train statistics per model
+    :param field: List containing models prediction field(s).
+    :param model_names: List of model names
+    :param output_directory: Directory where the plots will be saved
+    :param file_format:file format for output plots-
+           can be pdf(default) or png
+    :return None:
+    """
     filename_template = 'learning_curves_{}_{}.' + file_format
     filename_template_path = generate_filename_template_path(
         output_directory,
@@ -214,8 +239,12 @@ def compare_performance(
 ):
     """Produces model comparision barplot visualisations for each overall metric
 
-    :param test_stats_per_model: Test statistics per model
-    :param field: List containing models prediction field.
+
+    For each model (in the aligned lists of test_statistics and model_names)
+    it produces bars in a bar plot, one for each overall metric available
+    in the test_statistics file for the specified field.
+    :param test_stats_per_model: List containing train statistics per model
+    :param field: List containing models prediction field(s).
     :param model_names: List of model names
     :param output_directory: Directory where the plots will be saved
     :param file_format: file format for output plots-
@@ -2316,12 +2345,7 @@ def cli(sys_argv):
         metadata = load_json(vars(args)['ground_truth_metadata'])
         frequency_vs_f1(test_stats_per_model, metadata, **vars(args))
     elif args.visualization == 'learning_curves':
-        train_stats_per_model = load_data_for_viz(
-            'load_json', vars(args)['training_statistics']
-        )
-        learning_curves(
-            train_stats_per_model, **vars(args)
-        )
+        learning_curves_cli(**vars(args))
     else:
         logging.info('Visualization argument not recognized')
 
