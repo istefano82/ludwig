@@ -418,6 +418,21 @@ def roc_curves_cli(**kwargs):
     )
     roc_curves(probabilities_per_model, gt, **kwargs)
 
+
+def roc_curves_from_test_statistics_cli(**kwargs):
+    """Load model data from files to be shown by
+    roc_curves_from_test_statistics_cli.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    test_stats_per_model = load_data_for_viz(
+        'load_json', kwargs['test_statistics']
+    )
+    roc_curves_from_test_statistics(
+        test_stats_per_model, **kwargs
+    )
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -2063,7 +2078,7 @@ def roc_curves(
         file_format='pdf',
         **kwargs
 ):
-    """Show the roc curves for the specified model output field.
+    """Show the roc curves for the specified models output field.
 
     This visualization produces a line chart plotting the roc curves for the
     specified field. If field is a category feature, positive_label indicates
@@ -2118,6 +2133,19 @@ def roc_curves_from_test_statistics(
         file_format='pdf',
         **kwargs
 ):
+    """Show the roc curves for the specified models output binary field.
+
+    This visualization uses the field, test_statistics and model_names
+    parameters. field needs to be binary feature. This visualization produces a
+    line chart plotting the roc curves for the specified field.
+    :param test_stats_per_model: List containing train statistics per model
+    :param field: Prediction field containing ground truth.
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     model_names_list = convert_to_list(model_names)
     filename_template = 'roc_curves_from_prediction_statistics.' + file_format
     filename_template_path = generate_filename_template_path(
@@ -2744,12 +2772,7 @@ def cli(sys_argv):
     elif args.visualization == 'roc_curves':
         roc_curves_cli(**vars(args))
     elif args.visualization == 'roc_curves_from_test_statistics':
-        test_stats_per_model = load_data_for_viz(
-            'load_json', vars(args)['test_statistics']
-        )
-        roc_curves_from_test_statistics(
-            test_stats_per_model, **vars(args)
-        )
+        roc_curves_from_test_statistics_cli(**vars(args))
     elif args.visualization == 'calibration_1_vs_all':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(
