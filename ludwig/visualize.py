@@ -328,6 +328,22 @@ def confidence_thresholding_data_vs_acc_subset_cli(**kwargs):
         probabilities_per_model, gt, **kwargs
     )
 
+
+def confidence_thresholding_data_vs_acc_subset_per_class_cli(**kwargs):
+    """Load model data from files to be shown by compare_classifiers_multiclass
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    metadata = load_json(kwargs['ground_truth_metadata'])
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    confidence_thresholding_data_vs_acc_subset_per_class(
+        probabilities_per_model, gt, metadata, **kwargs
+    )
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -1331,7 +1347,7 @@ def confidence_thresholding_data_vs_acc_subset(
     :param gt: NumPy Array containing computed model ground truth data for
                target prediction field based on the model metadata
     :param top_n_classes: List containing the number of classes to plot
-    labels_limit: Maximum numbers of labels.
+    :param labels_limit: Maximum numbers of labels.
     :param subset: Type of the subset filtering
     :param model_names: List of the names of the models to use as labels.
     :param output_directory: Directory where to save plots.
@@ -1339,7 +1355,8 @@ def confidence_thresholding_data_vs_acc_subset(
     :param file_format: File format of output plots - pdf or png
     :return None:
     """
-    k = top_n_classes[0]
+    top_n_classes_list = convert_to_list(top_n_classes)
+    k = top_n_classes_list[0]
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
     probs = probs_per_model
@@ -1428,12 +1445,50 @@ def confidence_thresholding_data_vs_acc_subset_per_class(
         file_format='pdf',
         **kwargs
 ):
+    """Show models comparision of confidence treshold data vs accuracy on a
+    subset of data per class in top n classes.
+
+    For each model (in the aligned lists of probabilities and model_names)
+    it produces a line indicating the accuracy of the model and the data
+    coverage while increasing a threshold on the probabilities of
+    predictions for the specified field, considering only a subset of the
+    full training set. The way the subset is obtained is using the
+    top_n_classes  and subset parameters.  The difference with
+    confidence_thresholding is that it uses two axes instead of three,
+    not visualizing the threshold and having coverage as x axis instead of
+    the  threshold.
+
+    If the values of subset is ground_truth, then only datapoints where the
+    ground truth class is within the top n most frequent ones will be
+    considered  as test set, and the percentage of datapoints that have been
+    kept from the original set will be displayed. If the values of subset is
+    predictions, then only datapoints where the the model predicts a class that
+    is within the top n most frequent ones will be considered as test set, and
+    the percentage of datapoints that have been kept from the original set will
+    be displayed for each model.
+
+    The difference with confidence_thresholding_data_vs_acc_subset is that it
+    produces one plot per class within the top_n_classes.
+    :param probs_per_model: List of model probabilities
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    :param metadata: Model's input metadata
+    :param top_n_classes: List containing the number of classes to plot
+    :param labels_limit: Maximum numbers of labels.
+    :param subset: Type of the subset filtering
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     filename_template = 'confidence_thresholding_data_vs_acc_subset_per_class_{}.' + file_format
     filename_template_path = generate_filename_template_path(
         output_directory,
         filename_template
     )
-    k = top_n_classes[0]
+    top_n_classes_list = convert_to_list(top_n_classes)
+    k = top_n_classes_list[0]
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
     probs = probs_per_model
@@ -2528,14 +2583,7 @@ def cli(sys_argv):
         confidence_thresholding_data_vs_acc_subset_cli(**vars(args))
     elif (args.visualization ==
           'confidence_thresholding_data_vs_acc_subset_per_class'):
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        metadata = load_json(vars(args)['ground_truth_metadata'])
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        confidence_thresholding_data_vs_acc_subset_per_class(
-            probabilities_per_model, gt, metadata, **vars(args)
-        )
+        confidence_thresholding_data_vs_acc_subset_per_class_cli(**vars(args))
     elif args.visualization == 'confidence_thresholding_2thresholds_2d':
         gt1 = load_from_file(
             vars(args)['ground_truth'],
