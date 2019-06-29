@@ -762,11 +762,7 @@ def test_visualisation_cconfidence_thresholding_output_saved(csv_filename):
     vis_patterns = [vis_output_pattern_pdf, vis_output_pattern_png]
 
     for command, viz_pattern in zip(commands, vis_patterns):
-        result = subprocess.run(
-            command,
-            # stdout=subprocess.PIPE,
-            # stderr=subprocess.PIPE
-        )
+        result = subprocess.run(command)
         figure_cnt = glob.glob(viz_pattern)
 
         assert 0 == result.returncode
