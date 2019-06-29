@@ -433,6 +433,19 @@ def roc_curves_from_test_statistics_cli(**kwargs):
         test_stats_per_model, **kwargs
     )
 
+
+def calibration_1_vs_all_cli(**kwargs):
+    """Load model data from files to be shown by calibration_1_vs_all_cli.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    calibration_1_vs_all(probabilities_per_model, gt, **kwargs)
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -2178,6 +2191,33 @@ def calibration_1_vs_all(
         file_format='pdf',
         **kwargs
 ):
+    """Show models probability of predictions for the specified field.
+
+    For each class or each of the k most frequent classes if top_k is
+    specified,  it produces two plots computed on the fly from the
+    probabilities  of predictions for the specified field.
+
+    The first plot is a calibration curve that shows the calibration of the
+    predictions considering the current class to be the true one and all
+    others  to be a false one, drawing one line for each model (in the
+    aligned  lists of probabilities and model_names).
+
+    The second plot shows the distributions of the predictions considering
+    the  current class to be the true one and all others to be a false one,
+    drawing the distribution for each model (in the aligned lists of
+    probabilities and model_names).
+    :param probs_per_model: List of model probabilities
+    :param gt: NumPy Array containing computed model ground truth data for
+               target prediction field based on the model metadata
+    :param top_n_classes: List containing the number of classes to plot
+    :param labels_limit: Maximum numbers of labels.
+             If labels in dataset are higher than this number, "rare" label
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     probs = probs_per_model
     model_names_list = convert_to_list(model_names)
     filename_template = 'calibration_1_vs_all_{}.' + file_format
@@ -2774,13 +2814,7 @@ def cli(sys_argv):
     elif args.visualization == 'roc_curves_from_test_statistics':
         roc_curves_from_test_statistics_cli(**vars(args))
     elif args.visualization == 'calibration_1_vs_all':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        calibration_1_vs_all(
-            probabilities_per_model, gt, **vars(args)
-        )
+        calibration_1_vs_all_cli(**vars(args))
     elif args.visualization == 'calibration_multiclass':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(
