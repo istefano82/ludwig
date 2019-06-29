@@ -53,14 +53,13 @@ def validate_conf_treshholds_and_probabilities_2d_3d(
     for item, value in validation_mapping.items():
         item_len = len(value)
         if not item_len == 2:
-            exception_message = 'Two {} should be provided - {} was given.'.format(
-                item,
-                item_len
-            )
+            exception_message = 'Two {} should be provided - {} was given.'. \
+                format(item, item_len)
             logging.error(exception_message)
             raise RuntimeError(exception_message)
 
-def load_data_for_viz(load_type, model_file_statistics, *args, **kwargs):
+
+def load_data_for_viz(load_type, model_file_statistics, **kwargs):
     """Load model file data in to list of .
 
     :param load_type: type of the data loader to be used.
@@ -68,23 +67,24 @@ def load_data_for_viz(load_type, model_file_statistics, *args, **kwargs):
            model experiment stats.
     :return List of training statistics loaded as json objects.
     """
-    SUPPORTED_LOAD_TYPES = dict(load_json=load_json,
+    supported_load_types = dict(load_json=load_json,
                                 load_from_file=partial(load_from_file,
                                                        dtype=kwargs.get('dtype',
                                                                         None)))
-    loader = SUPPORTED_LOAD_TYPES[load_type]
+    loader = supported_load_types[load_type]
     try:
         stats_per_model = [loader(stats_f)
-                                for stats_f in
-                                model_file_statistics]
+                           for stats_f in
+                           model_file_statistics]
     except (TypeError, AttributeError):
         logging.exception(
             'Unable to open model statistics file {}!'.format(
                 model_file_statistics
             )
         )
-        return
+        raise
     return stats_per_model
+
 
 def convert_to_list(item):
     """If item is not list class instance or None put inside a list.
@@ -93,6 +93,7 @@ def convert_to_list(item):
     :return: original item if it is a list instance or list containing the item.
     """
     return item if item is None or isinstance(item, list) else [item]
+
 
 def validate_visualisation_prediction_field_from_train_stats(
         field,
@@ -111,8 +112,10 @@ def validate_visualisation_prediction_field_from_train_stats(
                 fields_set.add(key)
     try:
         return [field] if field in fields_set else fields_set
+    # raised if field is emtpy iterable (e.g. [] in set())
     except TypeError:
         return fields_set
+
 
 def validate_visualisation_prediction_field_from_test_stats(
         field,
@@ -130,8 +133,10 @@ def validate_visualisation_prediction_field_from_test_stats(
             fields_set.add(key)
     try:
         return [field] if field in fields_set else fields_set
+    # raised if field is emtpy iterable (e.g. [] in set())
     except TypeError:
         return fields_set
+
 
 def generate_filename_template_path(output_dir, filename_template):
     """Ensure path to template file can be constructed given an output dir.
@@ -147,6 +152,19 @@ def generate_filename_template_path(output_dir, filename_template):
         os.makedirs(output_dir, exist_ok=True)
         return os.path.join(output_dir, filename_template)
     return None
+
+
+def compare_performance_cli(**kwargs):
+    """Load model data from files to be visualised by compare_performance.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    test_stats_per_model = load_data_for_viz(
+        'load_json', kwargs['test_statistics']
+    )
+    compare_performance(test_stats_per_model, **kwargs)
+
 
 def learning_curves(
         train_stats_per_model,
@@ -194,6 +212,16 @@ def compare_performance(
         file_format='pdf',
         **kwargs
 ):
+    """Produces model comparision barplot visualisations for each overall metric
+
+    :param test_stats_per_model: Test statistics per model
+    :param field: List containing models prediction field.
+    :param model_names: List of model names
+    :param output_directory: Directory where the plots will be saved
+    :param file_format: file format for output plots-
+           can be pdf(default) or png
+    :return None:
+    """
     filename_template = 'compare_performance_{}.' + file_format
     filename_template_path = generate_filename_template_path(
         output_directory,
@@ -320,7 +348,6 @@ def compare_classifiers_performance_from_pred(
         file_format='pdf',
         **kwargs
 ):
-
     if labels_limit > 0:
         gt[gt > labels_limit] = labels_limit
 
@@ -670,7 +697,6 @@ def compare_classifiers_predictions(
         model_names_list[1] if model_names is not None and len(model_names) > 1
         else 'c2')
 
-
     pred_c1 = preds_per_model[0]
     pred_c2 = preds_per_model[1]
 
@@ -769,6 +795,7 @@ def compare_classifiers_predictions(
         title='{} vs {}'.format(name_c1, name_c2),
         filename=filename
     )
+
 
 def compare_classifiers_predictions_distribution(
         preds_per_model,
@@ -1150,7 +1177,6 @@ def confidence_thresholding_2thresholds_2d(
         gt_1[gt_1 > labels_limit] = labels_limit
         gt_2[gt_2 > labels_limit] = labels_limit
 
-
     thresholds = [t / 100 for t in range(0, 101, 5)]
     fixed_step_coverage = thresholds
     name_t1 = '{} threshold'.format(threshold_fields[0])
@@ -1308,7 +1334,6 @@ def confidence_thresholding_2thresholds_3d(
     probs = probs_per_model
     gt_1 = ground_truths[0]
     gt_2 = ground_truths[1]
-
 
     if labels_limit > 0:
         gt_1[gt_1 > labels_limit] = labels_limit
@@ -1769,7 +1794,8 @@ def confusion_matrix(
                     test_statistics[field]['confusion_matrix']
                 )
                 model_name_name = model_names_list[i] if (
-                        model_names_list is not None and i < len(model_names_list)
+                        model_names_list is not None and i < len(
+                    model_names_list)
                 ) else ''
 
                 if field in metadata and 'idx2str' in metadata[field]:
@@ -2115,12 +2141,7 @@ def cli(sys_argv):
     )
 
     if args.visualization == 'compare_performance':
-        test_stats_per_model = load_data_for_viz(
-            'load_json', vars(args)['test_statistics']
-        )
-        compare_performance(
-            test_stats_per_model, **vars(args)
-        )
+        compare_performance_cli(**vars(args))
     elif args.visualization == 'compare_classifiers_performance_from_prob':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(
@@ -2160,7 +2181,8 @@ def cli(sys_argv):
         )
         metadata = load_json(vars(args)['ground_truth_metadata'])
         compare_classifiers_multiclass_multimetric(
-            test_stats_per_model=test_stats_per_model, metadata=metadata, **vars(args)
+            test_stats_per_model=test_stats_per_model, metadata=metadata,
+            **vars(args)
         )
     elif args.visualization == 'compare_classifiers_predictions':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
