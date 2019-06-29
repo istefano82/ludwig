@@ -391,6 +391,21 @@ def confidence_thresholding_2thresholds_3d_cli(**kwargs):
     )
 
 
+def binary_threshold_vs_metric_cli(**kwargs):
+    """Load model data from files to be shown by
+    confidence_thresholding_data_vs_acc_subset.
+
+    :param kwargs: model configuration arguments
+    :return None:
+    """
+    gt = load_from_file(kwargs['ground_truth'], kwargs['field'])
+    probabilities_per_model = load_data_for_viz(
+        'load_from_file', kwargs['probabilities'], dtype=float
+    )
+    binary_threshold_vs_metric(
+        probabilities_per_model, gt, **kwargs
+    )
+
 def learning_curves(
         train_stats_per_model,
         field,
@@ -1917,12 +1932,34 @@ def binary_threshold_vs_metric(
         probs_per_model,
         gt,
         metrics,
-        positive_label=1,
+        positive_label,
         model_names=None,
         output_directory=None,
         file_format='pdf',
         **kwargs
 ):
+    """Show confidence of the model against metric for the specified field.
+
+    For each metric specified in metrics (options are f1, precision, recall,
+    accuracy), this visualization produces a line chart plotting a threshold
+    on  the confidence of the model against the metric for the specified
+    field.  If field is a category feature, positive_label indicates which is
+    the class to be considered positive class and all the others will be
+    considered negative. It needs to be an integer, to figure out the
+    association between classes and integers check the ground_truth_metadata
+    JSON file.
+    :param probs_per_model: List of model probabilities
+    :param gt: List of NumPy Arrays containing computed model ground truth
+               data for target prediction fields based on the model metadata
+    :param metrics: metrics to dispay (f1, precision, recall,
+                    accuracy)
+    :param positive_label: Label of the positive class
+    :param model_names: List of the names of the models to use as labels.
+    :param output_directory: Directory where to save plots.
+             If not specified, plots will be displayed in a window
+    :param file_format: File format of output plots - pdf or png
+    :return None:
+    """
     probs = probs_per_model
     model_names_list = convert_to_list(model_names)
     metrics_list = convert_to_list(metrics)
@@ -2673,13 +2710,7 @@ def cli(sys_argv):
     elif args.visualization == 'confidence_thresholding_2thresholds_3d':
         confidence_thresholding_2thresholds_3d_cli(**vars(args))
     elif args.visualization == 'binary_threshold_vs_metric':
-        gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
-        probabilities_per_model = load_data_for_viz(
-            'load_from_file', vars(args)['probabilities'], dtype=float
-        )
-        binary_threshold_vs_metric(
-            probabilities_per_model, gt, **vars(args)
-        )
+        binary_threshold_vs_metric_cli(**vars(args))
     elif args.visualization == 'roc_curves':
         gt = load_from_file(vars(args)['ground_truth'], vars(args)['field'])
         probabilities_per_model = load_data_for_viz(
