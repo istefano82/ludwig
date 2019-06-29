@@ -282,6 +282,7 @@ def compare_classifiers_predictions_distribution_cli(**kwargs):
         preds_per_model, gt, **kwargs
     )
 
+
 def confidence_thresholding_cli(**kwargs):
     """Load model data from files to be shown by confidence_thresholding.
 
@@ -2874,54 +2875,58 @@ def cli(sys_argv):
         level=logging_level_registry[args.logging_level],
         format='%(message)s'
     )
-
-    if args.visualization == 'compare_performance':
-        compare_performance_cli(**vars(args))
-    elif args.visualization == 'compare_classifiers_performance_from_prob':
-        compare_classifiers_performance_from_prob_cli(**vars(args))
-    elif args.visualization == 'compare_classifiers_performance_from_pred':
-        compare_classifiers_performance_from_pred_cli(**vars(args))
-    elif args.visualization == 'compare_classifiers_performance_subset':
-        compare_classifiers_performance_subset_cli(**vars(args))
-    elif args.visualization == 'compare_classifiers_performance_changing_k':
-        compare_classifiers_performance_changing_k_cli(**vars(args))
-    elif args.visualization == 'compare_classifiers_multiclass_multimetric':
-        compare_classifiers_multiclass_multimetric_cli(**vars(args))
-    elif args.visualization == 'compare_classifiers_predictions':
-        compare_classifiers_predictions_cli(**vars(args))
-    elif args.visualization == 'compare_classifiers_predictions_distribution':
-        compare_classifiers_predictions_distribution_cli(**vars(args))
-    elif args.visualization == 'confidence_thresholding':
-        confidence_thresholding_cli(**vars(args))
-    elif args.visualization == 'confidence_thresholding_data_vs_acc':
-        confidence_thresholding_data_vs_acc_cli(**vars(args))
-    elif args.visualization == 'confidence_thresholding_data_vs_acc_subset':
-        confidence_thresholding_data_vs_acc_subset_cli(**vars(args))
-    elif (args.visualization ==
-          'confidence_thresholding_data_vs_acc_subset_per_class'):
-        confidence_thresholding_data_vs_acc_subset_per_class_cli(**vars(args))
-    elif args.visualization == 'confidence_thresholding_2thresholds_2d':
-        confidence_thresholding_2thresholds_2d_cli(**vars(args))
-    elif args.visualization == 'confidence_thresholding_2thresholds_3d':
-        confidence_thresholding_2thresholds_3d_cli(**vars(args))
-    elif args.visualization == 'binary_threshold_vs_metric':
-        binary_threshold_vs_metric_cli(**vars(args))
-    elif args.visualization == 'roc_curves':
-        roc_curves_cli(**vars(args))
-    elif args.visualization == 'roc_curves_from_test_statistics':
-        roc_curves_from_test_statistics_cli(**vars(args))
-    elif args.visualization == 'calibration_1_vs_all':
-        calibration_1_vs_all_cli(**vars(args))
-    elif args.visualization == 'calibration_multiclass':
-        calibration_multiclass_cli(**vars(args))
-    elif args.visualization == 'confusion_matrix':
-        confusion_matrix_cli(**vars(args))
-    elif args.visualization == 'frequency_vs_f1':
-        frequency_vs_f1_cli(**vars(args))
-    elif args.visualization == 'learning_curves':
-        learning_curves_cli(**vars(args))
-    else:
+    VISUALISATIONS_CONFIG = {
+        'compare_performance':
+            compare_performance_cli,
+        'compare_classifiers_performance_from_prob':
+            compare_classifiers_performance_from_prob_cli,
+        'compare_classifiers_performance_from_pred':
+            compare_classifiers_performance_from_pred_cli,
+        'compare_classifiers_performance_subset':
+            compare_classifiers_performance_subset_cli,
+        'compare_classifiers_performance_changing_k':
+            compare_classifiers_performance_changing_k_cli,
+        'compare_classifiers_multiclass_multimetric':
+            compare_classifiers_multiclass_multimetric_cli,
+        'compare_classifiers_predictions':
+            compare_classifiers_predictions_cli,
+        'compare_classifiers_predictions_distribution':
+            compare_classifiers_predictions_distribution_cli,
+        'confidence_thresholding':
+            confidence_thresholding_cli,
+        'confidence_thresholding_data_vs_acc':
+            confidence_thresholding_data_vs_acc_cli,
+        'confidence_thresholding_data_vs_acc_subset':
+            confidence_thresholding_data_vs_acc_subset_cli,
+        'confidence_thresholding_data_vs_acc_subset_per_class':
+            confidence_thresholding_data_vs_acc_subset_per_class_cli,
+        'confidence_thresholding_2thresholds_2d':
+            confidence_thresholding_2thresholds_2d_cli,
+        'confidence_thresholding_2thresholds_3d':
+            confidence_thresholding_2thresholds_3d_cli,
+        'binary_threshold_vs_metric':
+            binary_threshold_vs_metric_cli,
+        'roc_curves':
+            roc_curves_cli,
+        'roc_curves_from_test_statistics':
+            roc_curves_from_test_statistics_cli,
+        'calibration_1_vs_all':
+            calibration_1_vs_all_cli,
+        'calibration_multiclass':
+            calibration_multiclass_cli,
+        'confusion_matrix':
+            confusion_matrix_cli,
+        'frequency_vs_f1':
+            frequency_vs_f1_cli,
+        'learning_curves':
+            learning_curves_cli
+    }
+    try:
+        vis_func = VISUALISATIONS_CONFIG[args.visualization]
+    except KeyError:
         logging.info('Visualization argument not recognized')
+        raise
+    vis_func(**vars(args))
 
 
 if __name__ == '__main__':
